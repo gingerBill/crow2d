@@ -17,6 +17,7 @@ Camera_Default :: Camera{
 	far  = +1024,
 }
 
+WHITE :: Colour{255, 255, 255, 255}
 
 
 Vertex :: struct {
@@ -35,9 +36,16 @@ Draw_Call :: struct {
 	length:     int,
 }
 
-set_shader :: proc(ctx: ^Context, shader: Shader) {
+@(require_results)
+default_draw_call :: proc(ctx: ^Context) -> Draw_Call {
 	dc := Draw_Call{}
 	dc.shader = ctx.default_shader
+	dc.texture = ctx.default_texture
+	return dc
+}
+
+set_shader :: proc(ctx: ^Context, shader: Shader) {
+	dc := default_draw_call(ctx)
 	if len(ctx.draw_calls) != 0 {
 		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
 		if last.shader == shader {
@@ -50,8 +58,7 @@ set_shader :: proc(ctx: ^Context, shader: Shader) {
 }
 
 set_texture :: proc(ctx: ^Context, t: Texture) {
-	dc := Draw_Call{}
-	dc.shader = ctx.default_shader
+	dc := default_draw_call(ctx)
 	if len(ctx.draw_calls) != 0 {
 		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
 		if last.texture == t {
@@ -64,8 +71,7 @@ set_texture :: proc(ctx: ^Context, t: Texture) {
 }
 
 set_depth_test :: proc(ctx: ^Context, test: bool) {
-	dc := Draw_Call{}
-	dc.shader = ctx.default_shader
+	dc := default_draw_call(ctx)
 	if len(ctx.draw_calls) != 0 {
 		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
 		if last.depth_test == test {
@@ -90,6 +96,25 @@ check_draw_call :: proc(ctx: ^Context) {
 
 draw_rect :: proc(ctx: ^Context, pos: Vec2, size: Vec2, col: Colour) {
 	check_draw_call(ctx)
+
+	a := pos
+	b := pos + {size.x, 0}
+	c := pos + {size.x, size.y}
+	d := pos + {0, size.y}
+
+	append(&ctx.vertices, Vertex{pos = a, col = col, uv = {0, 0}})
+	append(&ctx.vertices, Vertex{pos = b, col = col, uv = {1, 0}})
+	append(&ctx.vertices, Vertex{pos = c, col = col, uv = {1, 1}})
+
+	append(&ctx.vertices, Vertex{pos = c, col = col, uv = {1, 1}})
+	append(&ctx.vertices, Vertex{pos = d, col = col, uv = {0, 1}})
+	append(&ctx.vertices, Vertex{pos = a, col = col, uv = {0, 0}})
+}
+
+
+draw_rect_textured :: proc(ctx: ^Context, pos: Vec2, size: Vec2, tex: Texture, col := WHITE) {
+	check_draw_call(ctx)
+	set_texture(ctx, tex)
 
 	a := pos
 	b := pos + {size.x, 0}

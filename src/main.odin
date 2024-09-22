@@ -61,6 +61,8 @@ main :: proc() {
 			{255, 0, 0, 255},
 		)
 
+		gordon.draw_rect_textured(ctx, {500, 500}, {128, 128}, ctx.default_texture)
+
 		// gordon.draw_sector(ctx, {100, 100}, 40, 0, 0.75*math.TAU, {255, 0, 0, 255})
 		// gordon.draw_sector_outline(ctx, {100, 100}, 40, 10, 0, 0.75*math.TAU, {255, 255, 0, 255})
 

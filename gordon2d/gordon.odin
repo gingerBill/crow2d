@@ -17,7 +17,6 @@ Context :: struct {
 	prev_time: f64,
 	curr_time: f64,
 
-
 	frame_counter: u64,
 
 	io: IO,
@@ -25,8 +24,9 @@ Context :: struct {
 	user_data:  rawptr,
 	user_index: int,
 
-	default_shader: Shader,
-	vertex_buffer: Buffer,
+	default_shader:  Shader,
+	default_texture: Texture,
+	vertex_buffer:   Buffer,
 
 	update: Update_Proc,
 	fini: Fini_Proc,
@@ -49,6 +49,10 @@ Fini_Proc :: proc(ctx: ^Context)
 Shader  :: distinct u32
 Buffer  :: distinct u32
 Texture :: distinct u32
+
+SHADER_INVALID  :: ~Shader(0)
+BUFFER_INVALID  :: ~Buffer(0)
+TEXTURE_INVALID :: ~Texture(0)
 
 
 @(private)

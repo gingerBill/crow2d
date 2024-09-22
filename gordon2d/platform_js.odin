@@ -18,6 +18,8 @@ platform_init :: proc(ctx: ^Context) -> bool {
 	gl.BindBuffer(gl.ARRAY_BUFFER, gl.Buffer(ctx.vertex_buffer))
 	gl.BufferData(gl.ARRAY_BUFFER, len(ctx.vertices)*size_of(ctx.vertices[0]), nil, gl.DYNAMIC_DRAW)
 
+	ctx.default_texture = texture_load_default_white() or_return
+
 	for kind in events_to_handle {
 		if window_wide_events[kind] {
 			js.add_window_event_listener(kind, ctx, platform_event_callback, true)
@@ -37,6 +39,8 @@ platform_fini :: proc(ctx: ^Context) {
 			js.remove_event_listener(ctx.canvas_id, kind, ctx, platform_event_callback)
 		}
 	}
+
+	texture_unload(ctx.default_texture)
 
 	gl.DeleteBuffer(gl.Buffer(ctx.vertex_buffer))
 	gl.DeleteProgram(gl.Program(ctx.default_shader))
@@ -72,7 +76,7 @@ platform_update :: proc(ctx: ^Context) -> bool {
 
 @(require_results)
 platform_draw :: proc(ctx: ^Context) -> bool {
-	enable_shader_state :: proc(shader: gl.Program, camera: Camera, width, height: i32) {
+	enable_shader_state :: proc(ctx: ^Context, shader: gl.Program, camera: Camera, width, height: i32) {
 		gl.UseProgram(shader)
 
 		a_pos := gl.GetAttribLocation(shader, "a_pos")
@@ -100,7 +104,12 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 			mvp := proj * view
 
 			gl.UniformMatrix4fv(gl.GetUniformLocation(shader, "u_camera"), mvp)
+			gl.UniformMatrix4fv(gl.GetUniformLocation(shader, "u_view"), view)
+			gl.UniformMatrix4fv(gl.GetUniformLocation(shader, "u_projection"), proj)
 		}
+		gl.Uniform2f(gl.GetUniformLocation(shader, "u_screen_size"), f32(width), f32(height))
+		gl.Uniform2f(gl.GetUniformLocation(shader, "u_mouse_pos"), f32(ctx.io.mouse_pos.x), f32(ctx.io.mouse_pos.y))
+
 	}
 
 	gl.SetCurrentContextById(ctx.canvas_id) or_return
@@ -128,17 +137,11 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 	}
 
 	prev_draw_call := Draw_Call{}
-	prev_draw_call.shader  = ~Shader(0)
-	prev_draw_call.texture = ~Texture(0)
+	prev_draw_call.shader  = SHADER_INVALID
+	prev_draw_call.texture = TEXTURE_INVALID
 
 	for dc in ctx.draw_calls {
 		defer prev_draw_call = dc
-
-		if prev_draw_call.shader != dc.shader {
-			enable_shader_state(gl.Program(dc.shader), ctx.camera, width, height)
-		}
-
-		gl.Uniform1f(gl.GetUniformLocation(gl.Program(dc.shader), "u_layer"), dc.layer)
 
 		if prev_draw_call.depth_test != dc.depth_test {
 			if dc.depth_test {
@@ -148,9 +151,19 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 			}
 		}
 
+		if prev_draw_call.shader != dc.shader {
+			enable_shader_state(ctx, gl.Program(dc.shader), ctx.camera, width, height)
+		}
+
+		gl.Uniform1f(gl.GetUniformLocation(gl.Program(dc.shader), "u_layer"), dc.layer)
+
+
+		gl.ActiveTexture(gl.TEXTURE0)
 		if prev_draw_call.texture != dc.texture {
 			gl.BindTexture(gl.TEXTURE_2D, gl.Texture(dc.texture))
 		}
+		gl.Uniform1i(gl.GetUniformLocation(gl.Program(dc.shader), "u_texture"), 0)
+
 
 		gl.DrawArrays(gl.TRIANGLES, dc.offset, dc.length)
 	}
@@ -164,7 +177,12 @@ shader_vert := `
 precision highp float;
 
 uniform mat4  u_camera;
+uniform mat4  u_view;
+uniform mat4  u_projection;
 uniform float u_layer;
+
+uniform vec2  u_screen_size;
+uniform vec2  u_mouse_pos;
 
 attribute vec2 a_pos;
 attribute vec4 a_col;
@@ -182,16 +200,45 @@ void main() {
 
 shader_frag := `
 precision highp float;
+// precision highp sampler2D;
+
+uniform sampler2D u_texture;
 
 varying vec4 v_color;
 varying vec2 v_uv;
 
 void main() {
-	gl_FragColor = v_color;
+	vec4 tex = texture2D(u_texture, v_uv);
+	gl_FragColor = tex.rgba * v_color.rgba;
 }
 `
 
+@(require_results)
+platform_texture_load_from_img :: proc(img: Image) -> (tex: Texture, ok: bool) {
+	t := gl.CreateTexture()
+	defer if !ok {
+		gl.DeleteTexture(t)
+	}
 
+	size := len(img.pixels)*size_of(img.pixels[0])
+	data := raw_data(img.pixels)
+
+	gl.BindTexture(gl.TEXTURE_2D, t)
+	defer gl.BindTexture(gl.TEXTURE_2D, 0)
+
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, img.width, img.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, size, data)
+	// gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, i32(gl.CLAMP_TO_EDGE))
+	// gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, i32(gl.CLAMP_TO_EDGE))
+	// gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, i32(gl.NEAREST))
+
+	tex = Texture(t)
+	ok = true
+	return
+}
+
+platform_texture_unload :: proc(tex: Texture) {
+	gl.DeleteTexture(gl.Texture(tex))
+}
 
 
 events_to_handle := [?]js.Event_Kind{
