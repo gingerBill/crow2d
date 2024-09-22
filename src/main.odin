@@ -3,8 +3,8 @@ package main
 import gordon "../gordon2d"
 import "core:math"
 import "core:fmt"
-
-import "base:runtime"
+_ :: math
+_ :: fmt
 
 ctx0: gordon.Context
 
