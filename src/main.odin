@@ -29,6 +29,8 @@ y_velocity := f32(0)
 jump_height :: -500
 gravity :: -1000
 
+roboto_font: gordon.Font
+
 main :: proc() {
 	gordon.init(&ctx0, "canvas0",
 	init = proc(ctx: ^gordon.Context) -> bool {
@@ -39,6 +41,10 @@ main :: proc() {
 
 		player_pos = {width*0.5, height*0.5 - player_size.y}
 		ground = player_pos.y
+
+
+		ok: bool
+		roboto_font, ok = gordon.font_load_from_memory(#load("Roboto-Regular.ttf"), 64)
 
 		return true
 	},
@@ -101,12 +107,14 @@ main :: proc() {
 			y_velocity -= gravity * dt
 		}
 
-		player_pos.x = clamp(player_pos.x, 0, width-player_size.x-1)
+		player_pos.x = clamp(player_pos.x, 0, width-player_size.x)
 		if player_pos.y > ground {
 			player_pos.y = ground
 			y_velocity = 0
 		}
 		player_pos.y = clamp(player_pos.y, 0, ground)
+
+		gordon.draw_text(ctx, &roboto_font, "Hellope!\nWhatever\tthe fuck", {60, 60}, gordon.WHITE)
 
 
 		// gordon.draw_circle(ctx, pos + {100, 0}, 40, col.gbra)

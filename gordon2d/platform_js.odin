@@ -52,11 +52,13 @@ platform_update :: proc(ctx: ^Context) -> bool {
 	{
 		client_width  := i32(js.get_element_key_f64(ctx.canvas_id, "clientWidth"))
 		client_height := i32(js.get_element_key_f64(ctx.canvas_id, "clientHeight"))
-		client_width  /= i32(ctx.pixel_scale)
-		client_height /= i32(ctx.pixel_scale)
+		client_width  /= max(i32(ctx.pixel_scale), 1)
+		client_height /= max(i32(ctx.pixel_scale), 1)
+		client_width  = max(client_width, 1)
+		client_height = max(client_height, 1)
 
-		width  := i32(js.get_element_key_f64(ctx.canvas_id, "width"))
-		height := i32(js.get_element_key_f64(ctx.canvas_id, "height"))
+		width  := max(i32(js.get_element_key_f64(ctx.canvas_id, "width")),  1)
+		height := max(i32(js.get_element_key_f64(ctx.canvas_id, "height")), 1)
 
 		if client_width != width {
 			js.set_element_key_f64(ctx.canvas_id, "width",  f64(client_width))
