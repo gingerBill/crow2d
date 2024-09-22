@@ -1,7 +1,5 @@
 package gordon
 
-import "core:fmt"
-
 IO :: struct {
 	mouse_pos:         [2]i32,
 	mouse_last_pos:    [2]i32,

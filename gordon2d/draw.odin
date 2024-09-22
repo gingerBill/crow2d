@@ -1,6 +1,5 @@
 package gordon
 
-import gl "vendor:wasm/WebGL"
 import "core:math"
 import "core:math/linalg"
 
