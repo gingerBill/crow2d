@@ -59,7 +59,10 @@ texture_load_default_white :: proc() -> (texture: Texture, ok: bool) {
 	img.pixels = white_pixel[:]
 	img.width  = 1
 	img.height = 1
-	return texture_load_from_image(img, TEXTURE_OPTIONS_DEFAULT)
+	return texture_load_from_image(img, {
+		filter = .Nearest,
+		wrap = {.Clamp_To_Edge, .Clamp_To_Edge},
+	})
 }
 
 

@@ -110,6 +110,8 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 		gl.Uniform2f(gl.GetUniformLocation(shader, "u_screen_size"), f32(width), f32(height))
 		gl.Uniform2f(gl.GetUniformLocation(shader, "u_mouse_pos"), f32(ctx.io.mouse_pos.x), f32(ctx.io.mouse_pos.y))
 
+
+		gl.Uniform1i(gl.GetUniformLocation(gl.Program(shader), "u_texture"), 0)
 	}
 
 	gl.SetCurrentContextById(ctx.canvas_id) or_return
@@ -117,10 +119,6 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 	gl.BindBuffer(gl.ARRAY_BUFFER, gl.Buffer(ctx.vertex_buffer))
 	gl.BufferData(gl.ARRAY_BUFFER, len(ctx.vertices)*size_of(ctx.vertices[0]), raw_data(ctx.vertices), gl.DYNAMIC_DRAW)
 
-	defer {
-		clear(&ctx.vertices)
-		clear(&ctx.draw_calls)
-	}
 
 	width, height := gl.DrawingBufferWidth(), gl.DrawingBufferHeight()
 
@@ -131,10 +129,6 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-	if len(ctx.draw_calls) > 0 {
-		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
-		last.length = len(ctx.vertices)-last.offset
-	}
 
 	prev_draw_call := Draw_Call{}
 	prev_draw_call.shader  = SHADER_INVALID
@@ -151,27 +145,26 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 			}
 		}
 
+		if prev_draw_call.texture != dc.texture {
+			gl.ActiveTexture(gl.TEXTURE0)
+			gl.BindTexture(gl.TEXTURE_2D, gl.Texture(dc.texture))
+		}
+
 		if prev_draw_call.shader != dc.shader {
 			enable_shader_state(ctx, gl.Program(dc.shader), ctx.camera, width, height)
 		}
 
 		gl.Uniform1f(gl.GetUniformLocation(gl.Program(dc.shader), "u_layer"), dc.layer)
 
-
-		gl.ActiveTexture(gl.TEXTURE0)
-		if prev_draw_call.texture != dc.texture {
-			gl.BindTexture(gl.TEXTURE_2D, gl.Texture(dc.texture))
-		}
-		gl.Uniform1i(gl.GetUniformLocation(gl.Program(dc.shader), "u_texture"), 0)
-
-
 		gl.DrawArrays(gl.TRIANGLES, dc.offset, dc.length)
 	}
 
+	gl.UseProgram(0)
+	gl.ActiveTexture(gl.TEXTURE0)
+	gl.BindTexture(gl.TEXTURE_2D, 0)
+
 	return true
 }
-
-
 
 shader_vert := `
 precision highp float;

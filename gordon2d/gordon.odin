@@ -43,6 +43,7 @@ Context :: struct {
 }
 
 Update_Proc :: proc(ctx: ^Context, dt: f32)
+Init_Proc :: proc(ctx: ^Context) -> bool
 Fini_Proc :: proc(ctx: ^Context)
 
 
@@ -58,7 +59,7 @@ TEXTURE_INVALID :: ~Texture(0)
 @(private)
 global_context_list: ^Context
 
-init :: proc(ctx: ^Context, canvas_id: string, update: Update_Proc, fini: Fini_Proc = nil, pixel_scale := 1) -> bool {
+init :: proc(ctx: ^Context, canvas_id: string, init: Init_Proc, update: Update_Proc, fini: Fini_Proc = nil, pixel_scale := 1) -> bool {
 	ctx.canvas_id = canvas_id
 	ctx.update = update
 	ctx.fini = fini
@@ -73,6 +74,11 @@ init :: proc(ctx: ^Context, canvas_id: string, update: Update_Proc, fini: Fini_P
 
 	ctx._next = global_context_list
 	global_context_list = ctx
+
+	if !init(ctx) {
+		fini(ctx)
+		return false
+	}
 
 
 	return true
@@ -124,5 +130,13 @@ step :: proc(curr_time: f64) -> bool {
 
 @(private)
 draw_all :: proc(ctx: ^Context) -> bool {
-	return platform_draw(ctx)
+	if len(ctx.draw_calls) > 0 {
+		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
+		last.length = len(ctx.vertices)-last.offset
+	}
+
+	ok := platform_draw(ctx)
+	clear(&ctx.vertices)
+	clear(&ctx.draw_calls)
+	return ok
 }

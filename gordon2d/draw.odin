@@ -44,10 +44,12 @@ default_draw_call :: proc(ctx: ^Context) -> Draw_Call {
 	return dc
 }
 
-set_shader :: proc(ctx: ^Context, shader: Shader) {
+set_shader :: proc(ctx: ^Context, shader: Shader) -> (prev: Shader) {
+	prev = ctx.default_shader
 	dc := default_draw_call(ctx)
 	if len(ctx.draw_calls) != 0 {
 		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
+		prev = last.shader
 		if last.shader == shader {
 			return
 		}
@@ -55,12 +57,15 @@ set_shader :: proc(ctx: ^Context, shader: Shader) {
 	}
 	dc.shader = shader
 	append(&ctx.draw_calls, dc)
+	return
 }
 
-set_texture :: proc(ctx: ^Context, t: Texture) {
+set_texture :: proc(ctx: ^Context, t: Texture) -> (prev: Texture) {
+	prev = ctx.default_texture
 	dc := default_draw_call(ctx)
 	if len(ctx.draw_calls) != 0 {
 		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
+		prev = last.texture
 		if last.texture == t {
 			return
 		}
@@ -68,12 +73,15 @@ set_texture :: proc(ctx: ^Context, t: Texture) {
 	}
 	dc.texture = t
 	append(&ctx.draw_calls, dc)
+	return
 }
 
-set_depth_test :: proc(ctx: ^Context, test: bool) {
+set_depth_test :: proc(ctx: ^Context, test: bool) -> (prev: bool) {
+	prev = false
 	dc := default_draw_call(ctx)
 	if len(ctx.draw_calls) != 0 {
 		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
+		prev = last.depth_test
 		if last.depth_test == test {
 			return
 		}
@@ -81,16 +89,14 @@ set_depth_test :: proc(ctx: ^Context, test: bool) {
 	}
 	dc.depth_test = test
 	append(&ctx.draw_calls, dc)
+	return
 }
 
 
 
+@(private="file")
 check_draw_call :: proc(ctx: ^Context) {
-	if len(ctx.draw_calls) == 0 {
-		dc := Draw_Call{}
-		dc.shader = ctx.default_shader
-		append(&ctx.draw_calls, dc)
-	}
+	set_texture(ctx, ctx.default_texture)
 }
 
 
@@ -113,7 +119,6 @@ draw_rect :: proc(ctx: ^Context, pos: Vec2, size: Vec2, col: Colour) {
 
 
 draw_rect_textured :: proc(ctx: ^Context, pos: Vec2, size: Vec2, tex: Texture, col := WHITE) {
-	check_draw_call(ctx)
 	set_texture(ctx, tex)
 
 	a := pos
@@ -132,11 +137,17 @@ draw_rect_textured :: proc(ctx: ^Context, pos: Vec2, size: Vec2, tex: Texture, c
 
 
 draw_rect_outlines :: proc(ctx: ^Context, pos: Vec2, size: Vec2, thickness: f32, col: Colour) {
+	offset := len(ctx.vertices)
+
 	draw_rect(ctx, pos + {0, -thickness}, {size.x+thickness, thickness}, col)
 	draw_rect(ctx, pos + {size.x, 0}, {thickness, size.y+thickness}, col)
 
 	draw_rect(ctx, pos + {-thickness, size.y}, {size.x+thickness, thickness}, col)
 	draw_rect(ctx, pos + {-thickness, -thickness}, {thickness, size.y+thickness}, col)
+
+	for &v in ctx.vertices[offset:] {
+		v.uv = {0, 0}
+	}
 }
 
 @(private)

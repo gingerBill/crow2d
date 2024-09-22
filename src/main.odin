@@ -8,14 +8,25 @@ _ :: fmt
 
 ctx0: gordon.Context
 
+puppy: gordon.Texture
+puppy_data := #load("puppy.png")
+
 @(fini)
 fini :: proc() {
+	gordon.texture_unload(puppy)
+
 	gordon.fini(&ctx0)
 }
 
 
 main :: proc() {
-	gordon.init(&ctx0, "canvas0", proc(ctx: ^gordon.Context, dt: f32) {
+	gordon.init(&ctx0, "canvas0",
+	init = proc(ctx: ^gordon.Context) -> bool {
+		puppy = gordon.texture_load_from_memory(puppy_data) or_return
+
+		return true
+	},
+	update = proc(ctx: ^gordon.Context, dt: f32) {
 		// ctx.curr_depth = +1
 		// ctx.camera.zoom = f32(math.cos(ctx.curr_time) + 2)*2
 		// ctx.camera.target.x = f32(math.cos(ctx.curr_time))*50
@@ -40,6 +51,7 @@ main :: proc() {
 			col.rgb = col.brg
 		}
 
+
 		gordon.draw_rect_rotated(ctx, {400, 400}, {32, 64}, {16, 32}, f32(ctx.curr_time), {255, 0, 255, 255})
 		gordon.draw_rect_rotated_outlines(ctx, {400, 400}, {32, 64}, {16, 32}, f32(ctx.curr_time), 10, {0, 0, 255, 127})
 
@@ -61,7 +73,7 @@ main :: proc() {
 			{255, 0, 0, 255},
 		)
 
-		gordon.draw_rect_textured(ctx, {500, 500}, {128, 128}, ctx.default_texture)
+		gordon.draw_rect_textured(ctx, {500, 500}, {128, 128}, puppy)
 
 		// gordon.draw_sector(ctx, {100, 100}, 40, 0, 0.75*math.TAU, {255, 0, 0, 255})
 		// gordon.draw_sector_outline(ctx, {100, 100}, 40, 10, 0, 0.75*math.TAU, {255, 255, 0, 255})
