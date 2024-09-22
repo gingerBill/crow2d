@@ -34,26 +34,44 @@ image_unload :: proc(img: Image) {
 	stbi.image_free(raw_data(img.pixels))
 }
 
+Texture_Filter :: enum u8 {
+	Linear,
+	Nearest,
+}
+
+Texture_Wrap :: enum u8 {
+	Clamp_To_Edge,
+	Repeat,
+	Mirrored_Repeat,
+}
+
+Texture_Options :: struct {
+	filter: Texture_Filter,
+	wrap:   [2]Texture_Wrap,
+}
+
+TEXTURE_OPTIONS_DEFAULT :: Texture_Options{}
+
 
 texture_load_default_white :: proc() -> (texture: Texture, ok: bool) {
-	white_pixel := [4][4]u8{0..<4 = {255, 255, 255, 255}}
+	white_pixel := [1][4]u8{0..<1 = {255, 255, 255, 255}}
 	img: Image
 	img.pixels = white_pixel[:]
-	img.width  = 2
-	img.height = 2
-	return texture_load_from_image(img)
+	img.width  = 1
+	img.height = 1
+	return texture_load_from_image(img, TEXTURE_OPTIONS_DEFAULT)
 }
 
 
-texture_load_from_memory :: proc(data: []byte) -> (texture: Texture, ok: bool) {
+texture_load_from_memory :: proc(data: []byte, opts := TEXTURE_OPTIONS_DEFAULT) -> (texture: Texture, ok: bool) {
 	img := image_load_from_memory(data) or_return
 	defer image_unload(img)
 
-	return texture_load_from_image(img)
+	return texture_load_from_image(img, opts)
 }
 
-texture_load_from_image :: proc(img: Image) -> (texture: Texture, ok: bool) {
-	return platform_texture_load_from_img(img)
+texture_load_from_image :: proc(img: Image, opts := TEXTURE_OPTIONS_DEFAULT) -> (texture: Texture, ok: bool) {
+	return platform_texture_load_from_img(img, opts)
 }
 
 texture_unload :: proc(tex: Texture) {

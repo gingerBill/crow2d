@@ -213,23 +213,35 @@ void main() {
 }
 `
 
+@(private="file")
+texture_filter_map := [Texture_Filter]i32{
+	.Linear  = i32(gl.LINEAR),
+	.Nearest = i32(gl.NEAREST),
+}
+@(private="file")
+texture_wrap_map := [Texture_Wrap]i32{
+	.Clamp_To_Edge   = i32(gl.CLAMP_TO_EDGE),
+	.Repeat          = i32(gl.REPEAT),
+	.Mirrored_Repeat = i32(gl.MIRRORED_REPEAT),
+}
+
 @(require_results)
-platform_texture_load_from_img :: proc(img: Image) -> (tex: Texture, ok: bool) {
+platform_texture_load_from_img :: proc(img: Image, opts: Texture_Options) -> (tex: Texture, ok: bool) {
 	t := gl.CreateTexture()
 	defer if !ok {
 		gl.DeleteTexture(t)
 	}
 
-	size := len(img.pixels)*size_of(img.pixels[0])
-	data := raw_data(img.pixels)
-
 	gl.BindTexture(gl.TEXTURE_2D, t)
-	defer gl.BindTexture(gl.TEXTURE_2D, 0)
 
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, img.width, img.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, size, data)
-	// gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, i32(gl.CLAMP_TO_EDGE))
-	// gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, i32(gl.CLAMP_TO_EDGE))
-	// gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, i32(gl.NEAREST))
+	gl.TexImage2DSlice(gl.TEXTURE_2D, 0, gl.RGBA, img.width, img.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, img.pixels[:])
+
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, texture_filter_map[opts.filter])
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, texture_filter_map[opts.filter])
+
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, texture_wrap_map[opts.wrap[0]])
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture_wrap_map[opts.wrap[1]])
+	gl.BindTexture(gl.TEXTURE_2D, 0)
 
 	tex = Texture(t)
 	ok = true
