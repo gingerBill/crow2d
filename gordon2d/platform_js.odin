@@ -65,7 +65,7 @@ platform_update :: proc(ctx: ^Context) -> bool {
 		}
 
 		ctx.canvas_width  = client_width
-		ctx.canvas_height = client_width
+		ctx.canvas_height = client_height
 	}
 
 	gl.SetCurrentContextById(ctx.canvas_id) or_return
