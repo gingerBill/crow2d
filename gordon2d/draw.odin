@@ -1,5 +1,6 @@
 package gordon
 
+import "core:slice"
 import "core:math"
 import "core:math/linalg"
 
@@ -122,6 +123,35 @@ set_layer :: proc(ctx: ^Context, layer: f32) -> (prev: f32) {
 	return
 }
 
+
+sort_draw_calls :: proc(draw_calls: ^[dynamic]Draw_Call) {
+	slice.sort_by(draw_calls[:], proc(a, b: Draw_Call) -> bool {
+		return a.layer < b.layer
+	})
+
+
+	// for i := 1; i < len(draw_calls); /**/ {
+	// 	a := &draw_calls[i-1]
+	// 	b := &draw_calls[i]
+	// 	if a.shader == b.shader &&
+	// 	   a.texture == b.texture &&
+	// 	   a.depth_test == b.depth_test &&
+	// 	   a.layer == b.layer {
+	// 		if a.offset+a.length == b.offset {
+	// 			a.length += b.length
+	// 			ordered_remove(draw_calls, i)
+	// 			continue
+	// 		}
+	// 		if b.offset+b.length == a.offset {
+	// 			a.offset = b.offset
+	// 			a.length = a.length+b.length
+	// 			ordered_remove(draw_calls, i)
+	// 			continue
+	// 		}
+	// 	}
+	// 	i += 1
+	// }
+}
 
 
 

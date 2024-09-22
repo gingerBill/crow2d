@@ -134,6 +134,8 @@ draw_all :: proc(ctx: ^Context) -> bool {
 		last.length = len(ctx.vertices)-last.offset
 	}
 
+	sort_draw_calls(&ctx.draw_calls)
+
 	ok := platform_draw(ctx)
 	clear(&ctx.vertices)
 	clear(&ctx.draw_calls)
