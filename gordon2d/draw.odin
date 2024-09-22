@@ -27,8 +27,8 @@ Vertex :: struct {
 }
 
 Draw_Call :: struct {
-	program:    gl.Program,
-	texture:    gl.Texture,
+	shader:     Shader,
+	texture:    Texture,
 	layer:      f32,
 	depth_test: bool,
 
@@ -36,26 +36,23 @@ Draw_Call :: struct {
 	length:     int,
 }
 
-Draw_Call_Default :: Draw_Call{}
-
-
-set_program :: proc(ctx: ^Context, p: gl.Program) {
-	dc := Draw_Call_Default
-	dc.program = ctx.program
+set_shader :: proc(ctx: ^Context, shader: Shader) {
+	dc := Draw_Call{}
+	dc.shader = ctx.default_shader
 	if len(ctx.draw_calls) != 0 {
 		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
-		if last.program == p {
+		if last.shader == shader {
 			return
 		}
 		dc = last^
 	}
-	dc.program = p
+	dc.shader = shader
 	append(&ctx.draw_calls, dc)
 }
 
-set_texture :: proc(ctx: ^Context, t: gl.Texture) {
-	dc := Draw_Call_Default
-	dc.program = ctx.program
+set_texture :: proc(ctx: ^Context, t: Texture) {
+	dc := Draw_Call{}
+	dc.shader = ctx.default_shader
 	if len(ctx.draw_calls) != 0 {
 		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
 		if last.texture == t {
@@ -68,8 +65,8 @@ set_texture :: proc(ctx: ^Context, t: gl.Texture) {
 }
 
 set_depth_test :: proc(ctx: ^Context, test: bool) {
-	dc := Draw_Call_Default
-	dc.program = ctx.program
+	dc := Draw_Call{}
+	dc.shader = ctx.default_shader
 	if len(ctx.draw_calls) != 0 {
 		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
 		if last.depth_test == test {
@@ -85,8 +82,8 @@ set_depth_test :: proc(ctx: ^Context, test: bool) {
 
 check_draw_call :: proc(ctx: ^Context) {
 	if len(ctx.draw_calls) == 0 {
-		dc := Draw_Call_Default
-		dc.program = ctx.program
+		dc := Draw_Call{}
+		dc.shader = ctx.default_shader
 		append(&ctx.draw_calls, dc)
 	}
 }
