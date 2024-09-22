@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Gordon</title>
+	<style type="text/css">
+		* {
+			margin: 0;
+			padding: 0;
+		}
+		html, body {
+			width: 100%;
+			height: 100%;
+		}
+		canvas {
+			display: block;
+		}
+	</style>
+</head>
+<body>
+	<!-- <h1 style="text-align: center">Gordon's Alive‽</h1> -->
+
+	<canvas id="canvas0" class="gordon-canvas" style="width: 100%; height: 100%"></canvas>
+	<!-- <canvas id="canvas0" class="gordon-canvas" style="width: 854px; height: 480px"></canvas> -->
+
+	<script type="text/javascript" src="gordon.js"></script>
+	<script type="text/javascript">
+		odin.runWasm("/gordon.wasm", null);
+	</script>
+</html>
