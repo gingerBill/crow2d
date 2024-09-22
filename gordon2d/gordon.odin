@@ -10,8 +10,8 @@ Colour :: distinct [4]u8
 
 Context :: struct {
 	canvas_id:     string,
-	canvas_width:  i32,
-	canvas_height: i32,
+	canvas_width:  f32,
+	canvas_height: f32,
 	pixel_scale:   u8,
 
 	prev_time: f64,
@@ -79,7 +79,6 @@ init :: proc(ctx: ^Context, canvas_id: string, init: Init_Proc, update: Update_P
 		fini(ctx)
 		return false
 	}
-
 
 	return true
 }

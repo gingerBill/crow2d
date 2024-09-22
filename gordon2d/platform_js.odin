@@ -28,6 +28,7 @@ platform_init :: proc(ctx: ^Context) -> bool {
 		}
 	}
 
+	platform_update(ctx) or_return
 	return true
 }
 
@@ -64,8 +65,8 @@ platform_update :: proc(ctx: ^Context) -> bool {
 			js.set_element_key_f64(ctx.canvas_id, "height", f64(client_height))
 		}
 
-		ctx.canvas_width  = client_width
-		ctx.canvas_height = client_height
+		ctx.canvas_width  = f32(client_width)
+		ctx.canvas_height = f32(client_height)
 	}
 
 	gl.SetCurrentContextById(ctx.canvas_id) or_return
