@@ -1,6 +1,6 @@
 package main
 
-import "gordon"
+import gordon "../gordon2d"
 import "core:math"
 import "core:fmt"
 
