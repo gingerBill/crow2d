@@ -1,7 +1,7 @@
 #+private
 package gordon
 
-import js "vendor:wasm/js"
+import js "core:sys/wasm/js"
 import gl "vendor:wasm/WebGL"
 
 import glm "core:math/linalg/glsl"
