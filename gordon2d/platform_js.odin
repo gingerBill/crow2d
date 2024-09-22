@@ -69,11 +69,35 @@ platform_update :: proc(ctx: ^Context) -> bool {
 		ctx.canvas_height = f32(client_height)
 	}
 
+	for &gamepad in ctx.io.gamepads {
+		if state: js.Gamepad_State; gamepad.connected && js.get_gamepad_state(int(gamepad.index), &state) {
+			for button, i in state.buttons {
+				if i < len(Gamepad_Button) {
+					// TODO(bill): Don't rely on just Xbox360 layout
+					b := Gamepad_Button(i)
+					if button.pressed {
+						gamepad.buttons_down += {b}
+					} else {
+						gamepad.buttons_down -= {b}
+					}
+					gamepad.button_values[b] = f32(button.value)
+				}
+			}
+			for axis, i in state.axes {
+				if i < len(Gamepad_Axis) {
+					a := Gamepad_Axis(i)
+					gamepad.axis_values[a] = f32(axis)
+
+				}
+			}
+
+		}
+	}
+
 	gl.SetCurrentContextById(ctx.canvas_id) or_return
+
 	return true
 }
-
-
 
 @(require_results)
 platform_draw :: proc(ctx: ^Context) -> bool {
@@ -256,6 +280,10 @@ events_to_handle := [?]js.Event_Kind{
 	.Key_Down,
 	.Key_Up,
 	.Scroll,
+
+	.Gamepad_Connected,
+	.Gamepad_Disconnected,
+
 }
 
 window_wide_events := #partial [js.Event_Kind]bool {
@@ -266,6 +294,10 @@ window_wide_events := #partial [js.Event_Kind]bool {
 	.Key_Down  = true,
 	.Key_Up    = true,
 	.Key_Press = true,
+
+	.Gamepad_Connected = true,
+	.Gamepad_Disconnected = true,
+
 }
 
 platform_event_callback :: proc(e: js.Event) {
@@ -316,6 +348,27 @@ platform_event_callback :: proc(e: js.Event) {
 	case .Scroll:
 		ctx.io.scroll_delta.x += i32(e.scroll.delta.x)
 		ctx.io.scroll_delta.y += i32(e.scroll.delta.y)
+
+	case .Gamepad_Connected:
+		if ctx.io.connected_gamepad_count < MAX_GAMEPADS {
+			for &gamepad in ctx.io.gamepads {
+				if !gamepad.connected {
+					gamepad = {}
+					gamepad.connected = true
+					gamepad.index = i32(e.gamepad.index)
+					ctx.io.connected_gamepad_count += 1
+					break
+				}
+			}
+		}
+	case .Gamepad_Disconnected:
+		for &gamepad in ctx.io.gamepads {
+			if gamepad.connected && gamepad.index == i32(e.gamepad.index) {
+				gamepad = {}
+				ctx.io.connected_gamepad_count -= 1
+				break
+			}
+		}
 	}
 }
 

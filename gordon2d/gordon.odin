@@ -113,10 +113,10 @@ step :: proc(curr_time: f64) -> bool {
 			continue
 		}
 
+		platform_update(ctx) or_continue
+
 		io_init(ctx)
 		defer io_fini(ctx)
-
-		platform_update(ctx) or_continue
 
 		ctx.update(ctx, f32(dt))
 

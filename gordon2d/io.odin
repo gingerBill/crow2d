@@ -27,6 +27,9 @@ IO :: struct {
 	last_mouse_button:     Mouse_Button,
 	last_mouse_press_time: f64,
 
+	gamepads: [MAX_GAMEPADS]Gamepad,
+	connected_gamepad_count: u32,
+
 	click_count: i32,
 
 	full_reset: bool,
@@ -100,6 +103,60 @@ Key_Stroke :: struct {
 	key:       Key,
 }
 
+
+MAX_GAMEPADS :: 8
+
+Gamepad_Axis :: enum u16 {
+	Left_X,
+	Left_Y,
+	Right_X,
+	Right_Y,
+	Left_Trigger,
+	Right_Trigger,
+}
+
+
+Gamepad_Button :: enum u32 {
+	A,
+	B,
+	X,
+	Y,
+	Left_Shoulder,
+	Right_Shoulder,
+	Left_Trigger,
+	Right_Trigger,
+	Back,
+	Start,
+	Left_Stick,
+	Right_Stick,
+	Dpad_Up,
+	Dpad_Down,
+	Dpad_Left,
+	Dpad_Right,
+	Guide,
+
+	Misc1,    // Xbox Series X share button, PS5 microphone button, Nintendo Switch Pro capture button, Amazon Luna microphone button
+	Paddle1,  // Xbox Elite paddle P1
+	Paddle2,  // Xbox Elite paddle P3
+	Paddle3,  // Xbox Elite paddle P2
+	Paddle4,  // Xbox Elite paddle P4
+	Touchpad, // PS4/PS5 touchpad button
+}
+
+Gamepad_Button_Set :: distinct bit_set[Gamepad_Button; u32]
+
+Gamepad :: struct {
+	connected: bool,
+	index: i32,
+
+	axis_values:    [Gamepad_Axis]f32,
+	button_values:  [Gamepad_Button]f32,
+	buttons_down:              Gamepad_Button_Set,
+	buttons_pressed:           Gamepad_Button_Set,
+	buttons_released:          Gamepad_Button_Set,
+	internal_buttons_was_down: Gamepad_Button_Set,
+
+}
 
 Mouse_Button_Set :: distinct bit_set[Mouse_Button; u16]
 Key_Set          :: distinct bit_set[Key; u128]
@@ -178,7 +235,6 @@ io_init :: proc(ctx: ^Context) {
 	ctx.io.mouse_pressed  = ctx.io.mouse_down - ctx.io.internal_mouse_was_down
 	ctx.io.mouse_released = ctx.io.internal_mouse_was_down - ctx.io.mouse_down
 
-
 	ctx.io.modifiers = nil
 	for mod in MODIFIER_KEYS {
 		if mod in ctx.io.key_down {
@@ -187,6 +243,13 @@ io_init :: proc(ctx: ^Context) {
 			case .Left_Shift, .Right_Shift: ctx.io.modifiers += {.Shift}
 			case .Left_Alt,   .Right_Alt:   ctx.io.modifiers += {.Alt}
 			}
+		}
+	}
+
+	for &gamepad in ctx.io.gamepads {
+		if gamepad.connected {
+			gamepad.buttons_pressed  = gamepad.buttons_down - gamepad.internal_buttons_was_down
+			gamepad.buttons_released = gamepad.internal_buttons_was_down - gamepad.buttons_down
 		}
 	}
 
@@ -205,6 +268,13 @@ io_fini :: proc(ctx: ^Context) {
 
 	ctx.io.pressed_key_stroke = {}
 
+	for &gamepad in ctx.io.gamepads {
+		if gamepad.connected {
+			gamepad.internal_buttons_was_down = gamepad.buttons_down
+			gamepad.buttons_down = nil
+		}
+	}
+
 	if ctx.io.full_reset {
 		ctx.io.key_released  = ctx.io.key_down
 		ctx.io.mouse_released  = ctx.io.mouse_down
@@ -214,6 +284,15 @@ io_fini :: proc(ctx: ^Context) {
 		ctx.io.mouse_down    = nil
 		ctx.io.mouse_pressed = nil
 		ctx.io.modifiers     = nil
-		ctx.io.full_reset    = false
+
+		for &gamepad in ctx.io.gamepads {
+			if gamepad.connected {
+				gamepad.buttons_released = gamepad.buttons_down
+				gamepad.buttons_down     = nil
+				gamepad.buttons_pressed  = nil
+			}
+		}
+
+		ctx.io.full_reset = false
 	}
 }
