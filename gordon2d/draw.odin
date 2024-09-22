@@ -29,8 +29,8 @@ Vertex :: struct {
 Draw_Call :: struct {
 	shader:     Shader,
 	texture:    Texture,
-	layer:      f32,
 	depth_test: bool,
+	layer:      f32,
 
 	offset:     int,
 	length:     int,
@@ -38,10 +38,16 @@ Draw_Call :: struct {
 
 @(require_results)
 default_draw_call :: proc(ctx: ^Context) -> Draw_Call {
-	dc := Draw_Call{}
-	dc.shader = ctx.default_shader
-	dc.texture = ctx.default_texture
-	return dc
+	return Draw_Call{
+		shader     = ctx.default_shader,
+		texture    = ctx.default_texture,
+
+		layer      = 0,
+		depth_test = false,
+
+		offset     = len(ctx.vertices),
+		length     = 0,
+	}
 }
 
 set_shader :: proc(ctx: ^Context, shader: Shader) -> (prev: Shader) {
@@ -53,44 +59,69 @@ set_shader :: proc(ctx: ^Context, shader: Shader) -> (prev: Shader) {
 		if last.shader == shader {
 			return
 		}
+		last.length = len(ctx.vertices)-last.offset
 		dc = last^
 	}
 	dc.shader = shader
+	dc.offset = len(ctx.vertices)
 	append(&ctx.draw_calls, dc)
 	return
 }
 
-set_texture :: proc(ctx: ^Context, t: Texture) -> (prev: Texture) {
+set_texture :: proc(ctx: ^Context, texture: Texture) -> (prev: Texture) {
 	prev = ctx.default_texture
 	dc := default_draw_call(ctx)
 	if len(ctx.draw_calls) != 0 {
 		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
 		prev = last.texture
-		if last.texture == t {
+		if last.texture == texture {
 			return
 		}
+		last.length = len(ctx.vertices)-last.offset
 		dc = last^
 	}
-	dc.texture = t
+	dc.texture = texture
+	dc.offset = len(ctx.vertices)
 	append(&ctx.draw_calls, dc)
 	return
 }
 
-set_depth_test :: proc(ctx: ^Context, test: bool) -> (prev: bool) {
+set_depth_test :: proc(ctx: ^Context, depth_test: bool) -> (prev: bool) {
 	prev = false
 	dc := default_draw_call(ctx)
 	if len(ctx.draw_calls) != 0 {
 		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
 		prev = last.depth_test
-		if last.depth_test == test {
+		if last.depth_test == depth_test {
 			return
 		}
+		last.length = len(ctx.vertices)-last.offset
 		dc = last^
 	}
-	dc.depth_test = test
+	dc.depth_test = depth_test
+	dc.offset = len(ctx.vertices)
 	append(&ctx.draw_calls, dc)
 	return
 }
+
+set_layer :: proc(ctx: ^Context, layer: f32) -> (prev: f32) {
+	prev = 0
+	dc := default_draw_call(ctx)
+	if len(ctx.draw_calls) != 0 {
+		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
+		prev = last.layer
+		if last.layer == layer {
+			return
+		}
+		last.length = len(ctx.vertices)-last.offset
+		dc = last^
+	}
+	dc.layer = layer
+	dc.offset = len(ctx.vertices)
+	append(&ctx.draw_calls, dc)
+	return
+}
+
 
 
 

@@ -127,7 +127,6 @@ step :: proc(curr_time: f64) -> bool {
 }
 
 
-
 @(private)
 draw_all :: proc(ctx: ^Context) -> bool {
 	if len(ctx.draw_calls) > 0 {
