@@ -1,5 +1,5 @@
 #+private
-package gordon
+package crowd2d
 
 import js "core:sys/wasm/js"
 import gl "vendor:wasm/WebGL"

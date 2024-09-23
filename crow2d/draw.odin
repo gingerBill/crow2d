@@ -1,4 +1,4 @@
-package gordon
+package crowd2d
 
 import "core:slice"
 import "core:math"

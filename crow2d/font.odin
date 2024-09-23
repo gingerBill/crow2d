@@ -1,4 +1,4 @@
-package gordon
+package crowd2d
 
 import stbtt "vendor:stb/truetype"
 

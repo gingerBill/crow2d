@@ -1,4 +1,4 @@
-package gordon
+package crowd2d
 
 IO :: struct {
 	mouse_pos:         [2]i32,
