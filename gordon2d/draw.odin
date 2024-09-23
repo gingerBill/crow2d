@@ -7,7 +7,7 @@ import "core:math/linalg"
 Camera :: struct {
 	offset:           Vec2,
 	target:           Vec2,
-	rotation_radians: f32,
+	rotation: f32,
 	zoom:             f32,
 	near:             f32,
 	far:              f32,
@@ -18,12 +18,10 @@ Camera_Default :: Camera{
 	far  = +1024,
 }
 
-WHITE :: Colour{255, 255, 255, 255}
-
 
 Vertex :: struct {
 	pos: Vec2,
-	col: Colour,
+	col: Color,
 	uv:  Vec2,
 }
 
@@ -70,6 +68,11 @@ set_shader :: proc(ctx: ^Context, shader: Shader) -> (prev: Shader) {
 }
 
 set_texture :: proc(ctx: ^Context, texture: Texture) -> (prev: Texture) {
+	texture := texture
+	if texture.handle == HANDLE_INVALID {
+		texture = ctx.default_texture
+	}
+
 	prev = ctx.default_texture
 	dc := default_draw_call(ctx)
 	if len(ctx.draw_calls) != 0 {
@@ -161,115 +164,101 @@ check_draw_call :: proc(ctx: ^Context) {
 }
 
 
-draw_rect :: proc(ctx: ^Context, pos: Vec2, size: Vec2, col: Colour) {
-	check_draw_call(ctx)
 
-	a := pos
-	b := pos + {size.x, 0}
-	c := pos + {size.x, size.y}
-	d := pos + {0, size.y}
-
-	append(&ctx.vertices, Vertex{pos = a, col = col, uv = {0, 0}})
-	append(&ctx.vertices, Vertex{pos = b, col = col, uv = {1, 0}})
-	append(&ctx.vertices, Vertex{pos = c, col = col, uv = {1, 1}})
-
-	append(&ctx.vertices, Vertex{pos = c, col = col, uv = {1, 1}})
-	append(&ctx.vertices, Vertex{pos = d, col = col, uv = {0, 1}})
-	append(&ctx.vertices, Vertex{pos = a, col = col, uv = {0, 0}})
+@(private)
+rotate_vectors :: proc(ctx: ^Context, offset: int, pos, origin: Vec2, rotation: f32) {
+	s, c := math.sincos(rotation)
+	for &v in ctx.vertices[offset:] {
+		p := v.pos - pos - origin
+		p = {c*p.x - s*p.y, s*p.x + c*p.y}
+		p += pos
+		v.pos = p
+	}
 }
 
 
-draw_rect_textured :: proc(ctx: ^Context, pos: Vec2, size: Vec2, tex: Texture, col := WHITE) {
-	set_texture(ctx, tex)
+draw_rect :: proc(
+	ctx: ^Context, pos: Vec2, size: Vec2,
+	origin   := Vec2{0, 0},
+	rotation := f32(0),
+	texture  := TEXTURE_INVALID,
+	uv0      := Vec2{0, 0},
+	uv1      := Vec2{1, 1},
+	color    := WHITE,
+) {
+	set_texture(ctx, texture)
 
-	a := pos
-	b := pos + {size.x, 0}
-	c := pos + {size.x, size.y}
-	d := pos + {0, size.y}
-
-	append(&ctx.vertices, Vertex{pos = a, col = col, uv = {0, 0}})
-	append(&ctx.vertices, Vertex{pos = b, col = col, uv = {1, 0}})
-	append(&ctx.vertices, Vertex{pos = c, col = col, uv = {1, 1}})
-
-	append(&ctx.vertices, Vertex{pos = c, col = col, uv = {1, 1}})
-	append(&ctx.vertices, Vertex{pos = d, col = col, uv = {0, 1}})
-	append(&ctx.vertices, Vertex{pos = a, col = col, uv = {0, 0}})
-}
-
-
-draw_rect_outlines :: proc(ctx: ^Context, pos: Vec2, size: Vec2, thickness: f32, col: Colour) {
 	offset := len(ctx.vertices)
 
-	draw_rect(ctx, pos + {0, -thickness}, {size.x+thickness, thickness}, col)
-	draw_rect(ctx, pos + {size.x, 0}, {thickness, size.y+thickness}, col)
+	a := pos
+	b := pos + {size.x, 0}
+	c := pos + {size.x, size.y}
+	d := pos + {0, size.y}
 
-	draw_rect(ctx, pos + {-thickness, size.y}, {size.x+thickness, thickness}, col)
-	draw_rect(ctx, pos + {-thickness, -thickness}, {thickness, size.y+thickness}, col)
+	append(&ctx.vertices, Vertex{pos = a, col = color, uv = {uv0.x, uv0.y}})
+	append(&ctx.vertices, Vertex{pos = b, col = color, uv = {uv1.x, uv0.y}})
+	append(&ctx.vertices, Vertex{pos = c, col = color, uv = {uv1.x, uv1.y}})
+
+	append(&ctx.vertices, Vertex{pos = c, col = color, uv = {uv1.x, uv1.y}})
+	append(&ctx.vertices, Vertex{pos = d, col = color, uv = {uv0.x, uv1.y}})
+	append(&ctx.vertices, Vertex{pos = a, col = color, uv = {uv0.x, uv0.y}})
+	rotate_vectors(ctx, offset, pos, origin, rotation)
+}
+
+draw_rect_outline :: proc(
+	ctx: ^Context, pos: Vec2, size: Vec2, thickness: f32,
+	origin   := Vec2{0, 0},
+	rotation := f32(0),
+	color    := WHITE,
+) {
+	offset := len(ctx.vertices)
+
+	draw_rect(ctx, pos + {0, -thickness}, {size.x+thickness, thickness}, color=color)
+	draw_rect(ctx, pos + {size.x, 0}, {thickness, size.y+thickness}, color=color)
+
+	draw_rect(ctx, pos + {-thickness, size.y}, {size.x+thickness, thickness}, color=color)
+	draw_rect(ctx, pos + {-thickness, -thickness}, {thickness, size.y+thickness}, color=color)
 
 	for &v in ctx.vertices[offset:] {
 		v.uv = {0, 0}
 	}
-}
-
-@(private)
-rotate_vector :: proc(v: Vec2, c, s: f32) -> (r: Vec2) {
-	return {c*v.x - s*v.y, s*v.x + c*v.y}
-}
-
-draw_rect_rotated :: proc(ctx: ^Context, pos: Vec2, size: Vec2, origin: Vec2, rotation_radians: f32, col: Colour) {
-	offset := len(ctx.vertices)
-
-	s, c := math.sincos(rotation_radians)
-
-	draw_rect(ctx, pos, size, col)
-	for &v in ctx.vertices[offset:] {
-		p := v.pos
-		p = rotate_vector(p - pos - origin, c, s)
-		p += pos
-		v.pos = p
-	}
-}
-
-draw_rect_rotated_outlines :: proc(ctx: ^Context, pos: Vec2, size: Vec2, origin: Vec2, rotation_radians: f32, thickness: f32, col: Colour) {
-	offset := len(ctx.vertices)
-
-	s, c := math.sincos(rotation_radians)
-
-	draw_rect_outlines(ctx, pos, size, thickness, col)
-	for &v in ctx.vertices[offset:] {
-		p := v.pos
-		p = rotate_vector(p - pos - origin, c, s)
-		p += pos
-		v.pos = p
-	}
+	rotate_vectors(ctx, offset, pos, origin, rotation)
 }
 
 
 
-draw_quad :: proc(ctx: ^Context, verts: [4]Vec2, col: Colour) {
-	check_draw_call(ctx)
+draw_quad :: proc(ctx: ^Context, verts: [4]Vec2, color: Color, tex := TEXTURE_INVALID, uvs := [4]Vec2{}) {
+	set_texture(ctx, tex)
 
-	a := Vertex{pos = verts[0], col = col}
-	b := Vertex{pos = verts[1], col = col}
-	c := Vertex{pos = verts[2], col = col}
-	d := Vertex{pos = verts[3], col = col}
+	a := Vertex{pos = verts[0], uv = uvs[0], col = color}
+	b := Vertex{pos = verts[1], uv = uvs[1], col = color}
+	c := Vertex{pos = verts[2], uv = uvs[2], col = color}
+	d := Vertex{pos = verts[3], uv = uvs[3], col = color}
 
 	append(&ctx.vertices, a, b, c)
 	append(&ctx.vertices, c, d, a)
 }
 
-draw_line :: proc(ctx: ^Context, start, end: Vec2, thickness: f32, col: Colour) {
-	check_draw_call(ctx)
 
+draw_convex_polygon :: proc(ctx: ^Context, vertices: []Vertex, tex := TEXTURE_INVALID) {
+	set_texture(ctx, tex)
+
+	for i in 0..<len(vertices)-2 {
+		append(&ctx.vertices, vertices[0], vertices[i+1], vertices[i+2])
+	}
+}
+
+draw_line :: proc(ctx: ^Context, start, end: Vec2, thickness: f32, col: Color) {
+	check_draw_call(ctx)
 
 	dx := end-start
 	dy := linalg.normalize0(Vec2{-dx.y, +dx.x})
 
 	t := dy*thickness*0.5
-	a := start + t
-	b := end   + t
-	c := end   - t
-	d := start - t
+	a := start - t
+	c := end   + t
+	b := end   - t
+	d := start + t
 
 	append(&ctx.vertices, Vertex{pos = a, col = col, uv = {0, 0}})
 	append(&ctx.vertices, Vertex{pos = b, col = col, uv = {1, 0}})
@@ -280,12 +269,12 @@ draw_line :: proc(ctx: ^Context, start, end: Vec2, thickness: f32, col: Colour) 
 	append(&ctx.vertices, Vertex{pos = a, col = col, uv = {0, 0}})
 }
 
-draw_circle :: proc(ctx: ^Context, centre: Vec2, radius: f32, col: Colour, segments: int = 32) {
+draw_circle :: proc(ctx: ^Context, centre: Vec2, radius: f32, col: Color, segments := 32) {
 	draw_ellipse(ctx, centre, {radius, radius}, col, segments)
 }
 
 
-draw_ellipse :: proc(ctx: ^Context, centre: Vec2, #no_broadcast radii: Vec2, col: Colour, segments: int = 32) {
+draw_ellipse :: proc(ctx: ^Context, centre: Vec2, #no_broadcast radii: Vec2, col: Color, segments := 32) {
 	check_draw_call(ctx)
 
 
@@ -309,7 +298,7 @@ draw_ellipse :: proc(ctx: ^Context, centre: Vec2, #no_broadcast radii: Vec2, col
 }
 
 
-draw_ring :: proc(ctx: ^Context, centre: Vec2, inner_radius, outer_radius: f32, angle_start, angle_end: f32, col: Colour, segments: int = 32) {
+draw_ring :: proc(ctx: ^Context, centre: Vec2, inner_radius, outer_radius: f32, angle_start, angle_end: f32, col: Color, segments := 32) {
 	check_draw_call(ctx)
 
 	p := Vertex{pos = centre, col = col}
@@ -341,15 +330,15 @@ draw_ring :: proc(ctx: ^Context, centre: Vec2, inner_radius, outer_radius: f32, 
 	}
 }
 
-draw_sector :: proc(ctx: ^Context, centre: Vec2, radius: f32, angle_start, angle_end: f32, col: Colour, segments: int = 32) {
+draw_sector :: proc(ctx: ^Context, centre: Vec2, radius: f32, angle_start, angle_end: f32, col: Color, segments := 32) {
 	draw_ring(ctx, centre, 0, radius, angle_start, angle_end, col, segments)
 }
 
-draw_sector_outline :: proc(ctx: ^Context, centre: Vec2, radius: f32, thickness: f32, angle_start, angle_end: f32, col: Colour, segments: int = 32) {
+draw_sector_outline :: proc(ctx: ^Context, centre: Vec2, radius: f32, thickness: f32, angle_start, angle_end: f32, col: Color, segments := 32) {
 	draw_ring(ctx, centre, radius, radius+thickness, angle_start, angle_end, col, segments)
 }
 
-draw_ellipse_ring :: proc(ctx: ^Context, centre: Vec2, #no_broadcast inner_radii, outer_radii: Vec2, angle_start, angle_end: f32, col: Colour, segments: int = 32) {
+draw_ellipse_ring :: proc(ctx: ^Context, centre: Vec2, #no_broadcast inner_radii, outer_radii: Vec2, angle_start, angle_end: f32, col: Color, segments := 32) {
 	check_draw_call(ctx)
 
 	p := Vertex{pos = centre, col = col}
@@ -381,12 +370,12 @@ draw_ellipse_ring :: proc(ctx: ^Context, centre: Vec2, #no_broadcast inner_radii
 	}
 }
 
-draw_ellipse_arc :: proc(ctx: ^Context, centre: Vec2, radii: Vec2, thickness: f32, angle_start, angle_end: f32, col: Colour, segments: int = 32) {
+draw_ellipse_arc :: proc(ctx: ^Context, centre: Vec2, radii: Vec2, thickness: f32, angle_start, angle_end: f32, col: Color, segments := 32) {
 	draw_ellipse_ring(ctx, centre, radii, radii+thickness, angle_start, angle_end, col, segments)
 }
 
 
-draw_triangle :: proc(ctx: ^Context, v0, v1, v2: Vec2, col: Colour) {
+draw_triangle :: proc(ctx: ^Context, v0, v1, v2: Vec2, col: Color) {
 	check_draw_call(ctx)
 
 
@@ -398,14 +387,14 @@ draw_triangle :: proc(ctx: ^Context, v0, v1, v2: Vec2, col: Colour) {
 }
 
 
-draw_triangle_lines :: proc(ctx: ^Context, v0, v1, v2: Vec2, thickness: f32, col: Colour) {
+draw_triangle_lines :: proc(ctx: ^Context, v0, v1, v2: Vec2, thickness: f32, col: Color) {
 	draw_line(ctx, v0, v1, thickness, col)
 	draw_line(ctx, v1, v2, thickness, col)
 	draw_line(ctx, v2, v0, thickness, col)
 }
 
 
-draw_triangle_strip :: proc(ctx: ^Context, points: []Vec2, col: Colour) {
+draw_triangle_strip :: proc(ctx: ^Context, points: []Vec2, col: Color) {
 	if len(points) < 3 {
 		return
 	}
@@ -418,7 +407,7 @@ draw_triangle_strip :: proc(ctx: ^Context, points: []Vec2, col: Colour) {
 		b.col = col
 		c.col = col
 
-		if i&1 == 0 {
+		if i&1 != 0 {
 			a.pos = points[i]
 			b.pos = points[i-2]
 			c.pos = points[i-1]
@@ -432,7 +421,7 @@ draw_triangle_strip :: proc(ctx: ^Context, points: []Vec2, col: Colour) {
 }
 
 
-draw_line_strip :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Colour) {
+draw_line_strip :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Color) {
 	if len(points) < 2 {
 		return
 	}
@@ -445,7 +434,7 @@ draw_line_strip :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Colo
 }
 
 
-draw_spline_linear :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Colour) {
+draw_spline_linear :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Color) {
 	if len(points) < 2 {
 		return
 	}
@@ -490,7 +479,7 @@ draw_spline_linear :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: C
 
 SPLINE_SEGMENT_DIVISIONS :: 24
 
-draw_spline_basis :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Colour) {
+draw_spline_basis :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Color) {
 	if len(points) < 4 {
 		return
 	}
@@ -565,7 +554,7 @@ draw_spline_basis :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Co
 	draw_circle(ctx, curr_point, thickness*0.5, col)
 }
 
-draw_spline_catmull_rom :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Colour) {
+draw_spline_catmull_rom :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Color) {
 	if len(points) < 4 {
 		return
 	}

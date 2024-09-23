@@ -6,7 +6,42 @@ Vec4 :: [4]f32
 
 MAX_EVENT_COUNT :: 512
 
-Colour :: distinct [4]u8
+Color :: distinct [4]u8
+
+WHITE       :: Color{255, 255, 255, 255}
+BLACK       :: Color{  0,   0,   0, 255}
+BLANK       :: Color{  0,   0,   0,   0}
+
+LIGHT_GREY  :: Color{200, 200, 200, 255}
+GREY        :: Color{130, 130, 130, 255}
+DARK_GREY   :: Color{ 80,  80,  80, 255}
+
+RED         :: Color{230,  41,  55, 255}
+MAROON      :: Color{190,  33,  55, 255}
+ORANGE      :: Color{255, 161,   0, 255}
+YELLOW      :: Color{253, 249,   0, 255}
+GOLD        :: Color{255, 203,   0, 255}
+GREEN       :: Color{  0, 228,  48, 255}
+LIME        :: Color{  0, 158,  47, 255}
+DARK_GREEN  :: Color{  0, 117,  44, 255}
+SKY_BLUE    :: Color{127, 178, 255, 255}
+BLUE        :: Color{  0, 121, 241, 255}
+DARK_BLUE   :: Color{  0,  82, 172, 255}
+PURPLE      :: Color{200, 122, 255, 255}
+VIOLET      :: Color{135,  60, 190, 255}
+DARK_PURPLE :: Color{112,  31, 126, 255}
+MAGENTA     :: Color{255,   0, 255, 255}
+PINK        :: Color{255, 109, 194, 255}
+BEIGE       :: Color{211, 176, 131, 255}
+BROWN       :: Color{127, 106,  79, 255}
+DARK_BROWN  :: Color{ 76,  63,  47, 255}
+
+Draw_State :: struct {
+	camera:     Camera,
+	vertices:   [dynamic]Vertex,
+	draw_calls: [dynamic]Draw_Call,
+}
+
 
 Context :: struct {
 	canvas_id:     string,
@@ -31,13 +66,9 @@ Context :: struct {
 	update: Update_Proc,
 	fini: Fini_Proc,
 
-	camera:     Camera,
-	vertices:   [dynamic]Vertex,
-	draw_calls: [dynamic]Draw_Call,
+	using draw_state: Draw_State,
 
 	is_done: bool,
-
-	click: bool,
 
 	_next: ^Context,
 }
@@ -47,13 +78,23 @@ Init_Proc :: proc(ctx: ^Context) -> bool
 Fini_Proc :: proc(ctx: ^Context)
 
 
-Shader  :: distinct u32
-Buffer  :: distinct u32
-Texture :: distinct u32
+Shader :: struct {
+	handle: u32,
+}
+Buffer :: struct {
+	handle: u32,
+}
+Texture :: struct {
+	handle: u32,
+	width:  i32,
+	height: i32,
+}
 
-SHADER_INVALID  :: ~Shader(0)
-BUFFER_INVALID  :: ~Buffer(0)
-TEXTURE_INVALID :: ~Texture(0)
+HANDLE_INVALID :: ~u32(0)
+
+SHADER_INVALID  :: Shader{  handle = HANDLE_INVALID }
+BUFFER_INVALID  :: Buffer{  handle = HANDLE_INVALID }
+TEXTURE_INVALID :: Texture{ handle = HANDLE_INVALID }
 
 
 @(private)
@@ -97,6 +138,8 @@ fini :: proc(ctx: ^Context) {
 
 @(export)
 step :: proc(curr_time: f64) -> bool {
+	free_all(context.temp_allocator)
+
 	for ctx := global_context_list; ctx != nil; ctx = ctx._next {
 		dt := curr_time - ctx.curr_time
 		ctx.prev_time = ctx.curr_time

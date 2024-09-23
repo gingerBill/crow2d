@@ -62,7 +62,7 @@ font_unload :: proc(f: Font) {
 }
 
 
-draw_text :: proc(ctx: ^Context, f: ^Font, text: string, pos: Vec2, col: Colour) {
+draw_text :: proc(ctx: ^Context, f: ^Font, text: string, pos: Vec2, color: Color) {
 	set_texture(ctx, f.atlas)
 
 	next := pos
@@ -80,10 +80,10 @@ draw_text :: proc(ctx: ^Context, f: ^Font, text: string, pos: Vec2, col: Colour)
 			stbtt.GetBakedQuad(&f.backed_chars[0], f.atlas_width, f.atlas_height, i32(c)-32, &next.x, &next.y, &q, true)
 
 
-			a := Vertex{pos = {q.x0, q.y0}, uv = {q.s0, q.t0}, col = col}
-			b := Vertex{pos = {q.x1, q.y0}, uv = {q.s1, q.t0}, col = col}
-			c := Vertex{pos = {q.x1, q.y1}, uv = {q.s1, q.t1}, col = col}
-			d := Vertex{pos = {q.x0, q.y1}, uv = {q.s0, q.t1}, col = col}
+			a := Vertex{pos = {q.x0, q.y0}, uv = {q.s0, q.t0}, col = color}
+			b := Vertex{pos = {q.x1, q.y0}, uv = {q.s1, q.t0}, col = color}
+			c := Vertex{pos = {q.x1, q.y1}, uv = {q.s1, q.t1}, col = color}
+			d := Vertex{pos = {q.x0, q.y1}, uv = {q.s0, q.t1}, col = color}
 
 			append(&ctx.vertices, a, b, c)
 			append(&ctx.vertices, c, d, a)

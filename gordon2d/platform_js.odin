@@ -12,10 +12,10 @@ platform_init :: proc(ctx: ^Context) -> bool {
 	assert(gl.IsWebGL2Supported(), "WebGL 2 must be supported")
 
 	gl.SetCurrentContextById(ctx.canvas_id) or_return
-	ctx.default_shader = Shader(gl.CreateProgramFromStrings({shader_vert}, {shader_frag}) or_return)
+	ctx.default_shader.handle = u32(gl.CreateProgramFromStrings({shader_vert}, {shader_frag}) or_return)
 
-	ctx.vertex_buffer = Buffer(gl.CreateBuffer())
-	gl.BindBuffer(gl.ARRAY_BUFFER, gl.Buffer(ctx.vertex_buffer))
+	ctx.vertex_buffer.handle = u32(gl.CreateBuffer())
+	gl.BindBuffer(gl.ARRAY_BUFFER, gl.Buffer(ctx.vertex_buffer.handle))
 	gl.BufferData(gl.ARRAY_BUFFER, len(ctx.vertices)*size_of(ctx.vertices[0]), nil, gl.DYNAMIC_DRAW)
 
 	ctx.default_texture = texture_load_default_white() or_return
@@ -43,8 +43,8 @@ platform_fini :: proc(ctx: ^Context) {
 
 	texture_unload(ctx.default_texture)
 
-	gl.DeleteBuffer(gl.Buffer(ctx.vertex_buffer))
-	gl.DeleteProgram(gl.Program(ctx.default_shader))
+	gl.DeleteBuffer(gl.Buffer(ctx.vertex_buffer.handle))
+	gl.DeleteProgram(gl.Program(ctx.default_shader.handle))
 }
 
 @(require_results)
@@ -122,7 +122,7 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 			proj := glm.mat4Ortho3d(0, f32(width), f32(height), 0, camera.near, camera.far)
 
 			origin := glm.mat4Translate({-camera.target.x, -camera.target.y, 0})
-			rotation := glm.mat4Rotate({0, 0, 1}, camera.rotation_radians)
+			rotation := glm.mat4Rotate({0, 0, 1}, camera.rotation)
 			scale := glm.mat4Scale({camera.zoom, camera.zoom, 1})
 			translation := glm.mat4Translate({camera.offset.x, camera.offset.y, 0})
 
@@ -143,7 +143,7 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 
 	gl.SetCurrentContextById(ctx.canvas_id) or_return
 
-	gl.BindBuffer(gl.ARRAY_BUFFER, gl.Buffer(ctx.vertex_buffer))
+	gl.BindBuffer(gl.ARRAY_BUFFER, gl.Buffer(ctx.vertex_buffer.handle))
 	gl.BufferData(gl.ARRAY_BUFFER, len(ctx.vertices)*size_of(ctx.vertices[0]), raw_data(ctx.vertices), gl.DYNAMIC_DRAW)
 
 
@@ -153,6 +153,9 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 	gl.ClearColor(0.5, 0.7, 1.0, 1.0)
 	gl.Disable(gl.DEPTH_TEST)
 	gl.Enable(gl.BLEND)
+	gl.Enable(gl.CULL_FACE)
+	gl.CullFace(gl.BACK)
+	gl.FrontFace(gl.CW)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
@@ -174,14 +177,14 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 
 		if prev_draw_call.texture != dc.texture {
 			gl.ActiveTexture(gl.TEXTURE0)
-			gl.BindTexture(gl.TEXTURE_2D, gl.Texture(dc.texture))
+			gl.BindTexture(gl.TEXTURE_2D, gl.Texture(dc.texture.handle))
 		}
 
 		if prev_draw_call.shader != dc.shader {
-			enable_shader_state(ctx, gl.Program(dc.shader), ctx.camera, width, height)
+			enable_shader_state(ctx, gl.Program(dc.shader.handle), ctx.camera, width, height)
 		}
 
-		gl.Uniform1f(gl.GetUniformLocation(gl.Program(dc.shader), "u_layer"), dc.layer)
+		gl.Uniform1f(gl.GetUniformLocation(gl.Program(dc.shader.handle), "u_layer"), dc.layer)
 
 		gl.DrawArrays(gl.TRIANGLES, dc.offset, dc.length)
 	}
@@ -263,13 +266,15 @@ platform_texture_load_from_img :: proc(img: Image, opts: Texture_Options) -> (te
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture_wrap_map[opts.wrap[1]])
 	gl.BindTexture(gl.TEXTURE_2D, 0)
 
-	tex = Texture(t)
+	tex.handle = u32(t)
+	tex.width  = img.width
+	tex.height = img.height
 	ok = true
 	return
 }
 
 platform_texture_unload :: proc(tex: Texture) {
-	gl.DeleteTexture(gl.Texture(tex))
+	gl.DeleteTexture(gl.Texture(tex.handle))
 }
 
 
