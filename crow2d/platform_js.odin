@@ -21,7 +21,7 @@ platform_init :: proc(ctx: ^Context) -> bool {
 	gl.BindBuffer(gl.ARRAY_BUFFER, gl.Buffer(ctx.vertex_buffer.handle))
 	gl.BufferData(gl.ARRAY_BUFFER, len(ctx.vertices)*size_of(ctx.vertices[0]), nil, gl.DYNAMIC_DRAW)
 
-	ctx.default_texture = texture_load_default_white() or_return
+	ctx.default_texture = texture_load_default_white(ctx) or_return
 
 	for kind in events_to_handle {
 		if window_wide_events[kind] {
@@ -44,7 +44,7 @@ platform_fini :: proc(ctx: ^Context) {
 		}
 	}
 
-	texture_unload(ctx.default_texture)
+	texture_unload(ctx, ctx.default_texture)
 
 	gl.DeleteBuffer(gl.Buffer(ctx.vertex_buffer.handle))
 	gl.DeleteProgram(gl.Program(ctx.default_shader.handle))
@@ -153,7 +153,7 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 	width, height := gl.DrawingBufferWidth(), gl.DrawingBufferHeight()
 
 	gl.Viewport(0, 0, width, height)
-	gl.ClearColor(0.5, 0.7, 1.0, 1.0)
+	gl.ClearColor(f32(ctx.clear_color.r)/255, f32(ctx.clear_color.g)/255, f32(ctx.clear_color.b)/255, f32(ctx.clear_color.a)/255)
 	gl.Disable(gl.DEPTH_TEST)
 	gl.Enable(gl.BLEND)
 	gl.Enable(gl.CULL_FACE)
@@ -199,6 +199,7 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 	return true
 }
 
+@(private="file", rodata)
 shader_vert := `
 precision highp float;
 
@@ -224,6 +225,7 @@ void main() {
 }
 `
 
+@(private="file", rodata)
 shader_frag := `
 precision highp float;
 // precision highp sampler2D;
@@ -252,7 +254,7 @@ texture_wrap_map := [Texture_Wrap]i32{
 }
 
 @(require_results)
-platform_texture_load_from_img :: proc(img: Image, opts: Texture_Options) -> (tex: Texture, ok: bool) {
+platform_texture_load_from_img :: proc(ctx: ^Context, img: Image, opts: Texture_Options) -> (tex: Texture, ok: bool) {
 	t := gl.CreateTexture()
 	defer if !ok {
 		gl.DeleteTexture(t)
@@ -276,7 +278,7 @@ platform_texture_load_from_img :: proc(img: Image, opts: Texture_Options) -> (te
 	return
 }
 
-platform_texture_unload :: proc(tex: Texture) {
+platform_texture_unload :: proc(ctx: ^Context, tex: Texture) {
 	gl.DeleteTexture(gl.Texture(tex.handle))
 }
 

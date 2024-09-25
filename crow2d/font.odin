@@ -29,7 +29,7 @@ temp_font_atlas_data: [FONT_ATLAS_SIZE*FONT_ATLAS_SIZE]u8
 temp_font_atlas_pixels: [FONT_ATLAS_SIZE*FONT_ATLAS_SIZE][4]u8
 
 
-font_load_from_memory :: proc(data: []byte, size: i32) -> (f: Font, ok: bool) {
+font_load_from_memory :: proc(ctx: ^Context, data: []byte, size: i32) -> (f: Font, ok: bool) {
 	size := size
 	size = max(size, 1)
 	stbtt.InitFont(&f.info, raw_data(data), 0) or_return
@@ -52,13 +52,13 @@ font_load_from_memory :: proc(data: []byte, size: i32) -> (f: Font, ok: bool) {
 		width  = FONT_ATLAS_SIZE,
 		height = FONT_ATLAS_SIZE,
 	}
-	f.atlas = texture_load_from_image(img) or_return
+	f.atlas = texture_load_from_image(ctx, img) or_return
 
 	return
 }
 
-font_unload :: proc(f: Font) {
-	texture_unload(f.atlas)
+font_unload :: proc(ctx: ^Context, f: Font) {
+	texture_unload(ctx, f.atlas)
 }
 
 

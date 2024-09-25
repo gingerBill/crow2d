@@ -53,30 +53,30 @@ Texture_Options :: struct {
 TEXTURE_OPTIONS_DEFAULT :: Texture_Options{}
 
 
-texture_load_default_white :: proc() -> (texture: Texture, ok: bool) {
+texture_load_default_white :: proc(ctx: ^Context) -> (texture: Texture, ok: bool) {
 	white_pixel := [1][4]u8{0..<1 = {255, 255, 255, 255}}
 	img: Image
 	img.pixels = white_pixel[:]
 	img.width  = 1
 	img.height = 1
-	return texture_load_from_image(img, {
+	return texture_load_from_image(ctx, img, {
 		filter = .Nearest,
 		wrap = {.Clamp_To_Edge, .Clamp_To_Edge},
 	})
 }
 
 
-texture_load_from_memory :: proc(data: []byte, opts := TEXTURE_OPTIONS_DEFAULT) -> (texture: Texture, ok: bool) {
+texture_load_from_memory :: proc(ctx: ^Context, data: []byte, opts := TEXTURE_OPTIONS_DEFAULT) -> (texture: Texture, ok: bool) {
 	img := image_load_from_memory(data) or_return
 	defer image_unload(img)
 
-	return texture_load_from_image(img, opts)
+	return texture_load_from_image(ctx, img, opts)
 }
 
-texture_load_from_image :: proc(img: Image, opts := TEXTURE_OPTIONS_DEFAULT) -> (texture: Texture, ok: bool) {
-	return platform_texture_load_from_img(img, opts)
+texture_load_from_image :: proc(ctx: ^Context, img: Image, opts := TEXTURE_OPTIONS_DEFAULT) -> (texture: Texture, ok: bool) {
+	return platform_texture_load_from_img(ctx, img, opts)
 }
 
-texture_unload :: proc(tex: Texture) {
-	platform_texture_unload(tex)
+texture_unload :: proc(ctx: ^Context, tex: Texture) {
+	platform_texture_unload(ctx, tex)
 }

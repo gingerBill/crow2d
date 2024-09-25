@@ -13,14 +13,6 @@ ctx0: crow.Context
 puppy: crow.Texture
 puppy_data := #load("puppy.png")
 
-@(fini)
-fini :: proc() {
-	crow.texture_unload(puppy)
-
-	crow.fini(&ctx0)
-}
-
-
 player_pos: crow.Vec2
 player_size :: crow.Vec2{64, 64}
 player_speed :: 500
@@ -34,7 +26,7 @@ roboto_font: crow.Font
 main :: proc() {
 	crow.init(&ctx0, "canvas0",
 	init = proc(ctx: ^crow.Context) -> bool {
-		puppy = crow.texture_load_from_memory(puppy_data) or_return
+		puppy = crow.texture_load_from_memory(ctx, puppy_data) or_return
 
 		width := ctx.canvas_width
 		height := ctx.canvas_height
@@ -43,17 +35,18 @@ main :: proc() {
 		ground = player_pos.y
 
 
-		ok: bool
-		roboto_font, ok = crow.font_load_from_memory(#load("Roboto-Regular.ttf"), 64)
+		// ok: bool
+		// roboto_font, ok = crow.font_load_from_memory(#load("Roboto-Regular.ttf"), 64)
 
 		return true
 	},
 	update = proc(ctx: ^crow.Context, dt: f32) {
 		width := ctx.canvas_width
 		height := ctx.canvas_height
+		_ = width
+		_ = height
 
-
-		crow.draw_rect(ctx, {0, ground+player_size.y}, {width, height-ground-player_size.y})
+		crow.draw_rect(ctx, {0, ground+player_size.y}, {width, height-ground-player_size.y}, color={190, 100, 10, 255})
 		crow.draw_rect(ctx, player_pos, player_size, texture=puppy, color={200, 200, 200, 255})
 
 		// if gamepad := &ctx.io.gamepads[0]; gamepad.connected && gamepad.buttons_pressed != nil {
@@ -71,6 +64,10 @@ main :: proc() {
 					y_velocity = jump_height
 				}
 			}
+		}
+
+		if ctx.io.mouse_pressed != nil {
+			fmt.println(ctx.io.mouse_pressed, ctx.io.mouse_pos)
 		}
 
 		// ctx.camera.zoom = f32(math.cos(ctx.curr_time) + 2)*2
@@ -135,6 +132,9 @@ main :: proc() {
 			20,
 			{255, 0, 0, 255},
 		)
+	},
+	fini = proc(ctx: ^crow.Context) {
+		crow.texture_unload(ctx, puppy)
 	})
 
 	crow.start() // only needed on non-javascript platforms

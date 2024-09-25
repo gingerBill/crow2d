@@ -26,10 +26,10 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 }
 
 @(require_results)
-platform_texture_load_from_img :: proc(img: Image, opts: Texture_Options) -> (tex: Texture, ok: bool) {
+platform_texture_load_from_img :: proc(ctx: ^Context, img: Image, opts: Texture_Options) -> (tex: Texture, ok: bool) {
 	return
 }
 
-platform_texture_unload :: proc(tex: Texture) {
+platform_texture_unload :: proc(ctx: ^Context, tex: Texture) {
 
 }

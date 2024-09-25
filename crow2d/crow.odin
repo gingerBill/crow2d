@@ -81,6 +81,7 @@ Context :: struct {
 	canvas_width:  f32,
 	canvas_height: f32,
 	pixel_scale:   u8,
+	clear_color:   Color,
 
 	prev_time: f64,
 	curr_time: f64,
@@ -141,6 +142,7 @@ init :: proc(ctx: ^Context, canvas_id: string, init: Init_Proc, update: Update_P
 	ctx.fini = fini
 	ctx.pixel_scale = u8(clamp(pixel_scale, 1, 255))
 	ctx.camera = Camera_Default
+	ctx.clear_color = {128, 179, 255, 255}
 
 	reserve(&ctx.vertices,   1<<20)
 	reserve(&ctx.draw_calls, 1<<12)
@@ -160,16 +162,19 @@ init :: proc(ctx: ^Context, canvas_id: string, init: Init_Proc, update: Update_P
 
 // Only needed for non-JS platforms
 start :: proc() {
-	for ODIN_OS != .JS {
-		curr_time := time.time_to_unix(time.now())
-		curr_time_f64 := f64(curr_time)/1e9
-		if !step(curr_time_f64) {
+	start_time := time.tick_now()
+	for ODIN_OS != .JS && global_context_list != nil {
+		curr_time := time.duration_seconds(time.tick_since(start_time))
+		if !step(curr_time) {
 			break
 		}
 	}
 }
 
 fini :: proc(ctx: ^Context) {
+	if ctx == nil {
+		return
+	}
 	if ctx.fini != nil {
 		ctx->fini()
 	}
@@ -185,7 +190,9 @@ fini :: proc(ctx: ^Context) {
 step :: proc(curr_time: f64) -> bool {
 	free_all(context.temp_allocator)
 
-	for ctx := global_context_list; ctx != nil; ctx = ctx._next {
+	for ctx := global_context_list; ctx != nil; /**/ {
+		defer ctx = ctx._next
+
 		dt := curr_time - ctx.curr_time
 		ctx.prev_time = ctx.curr_time
 		ctx.curr_time = curr_time
@@ -208,7 +215,7 @@ step :: proc(curr_time: f64) -> bool {
 
 		ctx.update(ctx, f32(dt))
 
-		draw_all(ctx)
+		_ = draw_all(ctx)
 	}
 	return global_context_list != nil
 }
