@@ -136,5 +136,7 @@ main :: proc() {
 			{255, 0, 0, 255},
 		)
 	})
+
+	crow.start() // only needed on non-javascript platforms
 }
 

@@ -1,5 +1,7 @@
 package crowd2d
 
+import "core:time"
+
 Vec2 :: [2]f32
 Vec3 :: [3]f32
 Vec4 :: [4]f32
@@ -35,6 +37,37 @@ PINK        :: Color{255, 109, 194, 255}
 BEIGE       :: Color{211, 176, 131, 255}
 BROWN       :: Color{127, 106,  79, 255}
 DARK_BROWN  :: Color{ 76,  63,  47, 255}
+
+Camera :: struct {
+	offset:   Vec2,
+	target:   Vec2,
+	rotation: f32,
+	zoom:     f32,
+	near:     f32,
+	far:      f32,
+}
+Camera_Default :: Camera{
+	zoom = 1,
+	near = -1024,
+	far  = +1024,
+}
+
+
+Vertex :: struct {
+	pos: Vec2,
+	col: Color,
+	uv:  Vec2,
+}
+
+Draw_Call :: struct {
+	shader:     Shader,
+	texture:    Texture,
+	depth_test: bool,
+	layer:      f32,
+
+	offset:     int,
+	length:     int,
+}
 
 Draw_State :: struct {
 	camera:     Camera,
@@ -107,7 +140,6 @@ init :: proc(ctx: ^Context, canvas_id: string, init: Init_Proc, update: Update_P
 	ctx.pixel_scale = u8(clamp(pixel_scale, 1, 255))
 	ctx.camera = Camera_Default
 
-
 	reserve(&ctx.vertices,   1<<20)
 	reserve(&ctx.draw_calls, 1<<12)
 
@@ -122,6 +154,17 @@ init :: proc(ctx: ^Context, canvas_id: string, init: Init_Proc, update: Update_P
 	}
 
 	return true
+}
+
+// Only needed for non-JS platforms
+start :: proc() {
+	for ODIN_OS != .JS {
+		curr_time := time.time_to_unix(time.now())
+		curr_time_f64 := f64(curr_time)/1e9
+		if !step(curr_time_f64) {
+			break
+		}
+	}
 }
 
 fini :: proc(ctx: ^Context) {
@@ -165,7 +208,7 @@ step :: proc(curr_time: f64) -> bool {
 
 		draw_all(ctx)
 	}
-	return true
+	return global_context_list != nil
 }
 
 

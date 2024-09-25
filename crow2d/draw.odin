@@ -4,37 +4,6 @@ import "core:slice"
 import "core:math"
 import "core:math/linalg"
 
-Camera :: struct {
-	offset:           Vec2,
-	target:           Vec2,
-	rotation: f32,
-	zoom:             f32,
-	near:             f32,
-	far:              f32,
-}
-Camera_Default :: Camera{
-	zoom = 1,
-	near = -1024,
-	far  = +1024,
-}
-
-
-Vertex :: struct {
-	pos: Vec2,
-	col: Color,
-	uv:  Vec2,
-}
-
-Draw_Call :: struct {
-	shader:     Shader,
-	texture:    Texture,
-	depth_test: bool,
-	layer:      f32,
-
-	offset:     int,
-	length:     int,
-}
-
 @(require_results)
 default_draw_call :: proc(ctx: ^Context) -> Draw_Call {
 	return Draw_Call{
