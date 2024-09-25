@@ -104,6 +104,8 @@ Context :: struct {
 	is_done: bool,
 
 	_next: ^Context,
+
+	platform_data: Platform_Data,
 }
 
 Update_Proc :: proc(ctx: ^Context, dt: f32)

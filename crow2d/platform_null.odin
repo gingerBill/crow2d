@@ -3,6 +3,9 @@
 #+private
 package crowd2d
 
+Platform_Data :: struct {
+}
+
 @(require_results)
 platform_init :: proc(ctx: ^Context) -> bool {
 	return false

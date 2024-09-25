@@ -24,9 +24,6 @@ IO :: struct {
 
 	scroll_delta: [2]i32,
 
-	last_mouse_button:     Mouse_Button,
-	last_mouse_press_time: f64,
-
 	gamepads: [MAX_GAMEPADS]Gamepad,
 	connected_gamepad_count: u32,
 
@@ -59,8 +56,8 @@ Key :: enum u16 {
 	Q, R, S, T, U, V, W, X,
 	Y, Z,
 
-	Key_1, Key_2, Key_3, Key_4, Key_5,
-	Key_6, Key_7, Key_8, Key_9, Key_0,
+	Key_0, Key_1, Key_2, Key_3, Key_4,
+	Key_5, Key_6, Key_7, Key_8, Key_9,
 
 	Numpad_0, Numpad_1, Numpad_2, Numpad_3, Numpad_4,
 	Numpad_5, Numpad_6, Numpad_7, Numpad_8, Numpad_9,
@@ -208,8 +205,8 @@ key_strings := [Key]string{
 	.Q = "q", .R = "r", .S = "s", .T = "t", .U = "u", .V = "v", .W = "w", .X = "x",
 	.Y = "y", .Z = "z",
 
-	.Key_1 = "1", .Key_2 = "2", .Key_3 = "3", .Key_4 = "4", .Key_5 = "5",
-	.Key_6 = "6", .Key_7 = "7", .Key_8 = "8", .Key_9 = "9", .Key_0 = "0",
+	.Key_0 = "0", .Key_1 = "1", .Key_2 = "2", .Key_3 = "3", .Key_4 = "4",
+	.Key_5 = "5", .Key_6 = "6", .Key_7 = "7", .Key_8 = "8", .Key_9 = "9",
 
 	.Numpad_0 = "numpad_0", .Numpad_1 = "numpad_1", .Numpad_2 = "numpad_2", .Numpad_3 = "numpad_3", .Numpad_4 = "numpad_4",
 	.Numpad_5 = "numpad_5", .Numpad_6 = "numpad_6", .Numpad_7 = "numpad_7", .Numpad_8 = "numpad_8", .Numpad_9 = "numpad_9",

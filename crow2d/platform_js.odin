@@ -6,6 +6,9 @@ import gl "vendor:wasm/WebGL"
 
 import glm "core:math/linalg/glsl"
 
+Platform_Data :: struct {
+}
+
 @(require_results)
 platform_init :: proc(ctx: ^Context) -> bool {
 	gl.CreateCurrentContextById(ctx.canvas_id, gl.DEFAULT_CONTEXT_ATTRIBUTES) or_return
