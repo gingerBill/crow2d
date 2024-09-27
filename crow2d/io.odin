@@ -20,6 +20,8 @@ IO :: struct {
 	modifiers: Modifier_Key_Set,
 	pressed_key_stroke: Key_Stroke,
 
+	key_pressed_count_per_frame: [Key]u8,
+
 	last_key_press_time: f64,
 
 	scroll_delta: [2]i32,
@@ -271,6 +273,8 @@ io_fini :: proc(ctx: ^Context) {
 			gamepad.buttons_down = nil
 		}
 	}
+
+	ctx.io.key_pressed_count_per_frame = {}
 
 	if ctx.io.full_reset {
 		ctx.io.key_released  = ctx.io.key_down

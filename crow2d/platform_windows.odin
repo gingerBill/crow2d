@@ -227,6 +227,10 @@ platform_update :: proc(ctx: ^Context) -> bool {
 		if pressed {
 			ctx.io.last_key_press_time = ctx.curr_time
 			ctx.io.key_pressed += {key}
+
+			if count := &ctx.io.key_pressed_count_per_frame[key]; count^ < 255 {
+				count^ += 1
+			}
 		} else { // released
 			ctx.io.key_released += {key}
 		}

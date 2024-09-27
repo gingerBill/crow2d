@@ -345,6 +345,10 @@ platform_event_callback :: proc(e: js.Event) {
 				ctx.io.last_key_press_time = ctx.curr_time
 				ctx.io.key_pressed += {key}
 
+				if count := &ctx.io.key_pressed_count_per_frame[key]; count^ < 255 {
+					count^ += 1
+				}
+
 				if key not_in MODIFIER_KEYS {
 					ctx.io.pressed_key_stroke = { ctx.io.modifiers, key }
 				}
