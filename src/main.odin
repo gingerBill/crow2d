@@ -66,9 +66,15 @@ main :: proc() {
 			}
 		}
 
-		if ctx.io.mouse_pressed != nil {
-			fmt.println(ctx.io.mouse_pressed, ctx.io.mouse_pos)
+		// if ctx.io.mouse_pressed != nil {
+		// 	fmt.println(ctx.io.mouse_pressed, ctx.io.mouse_pos)
+		// }
+
+		for key in ctx.io.key_pressed {
+			fmt.println(key, ctx.io.key_pressed_count_per_frame[key])
 		}
+
+
 
 		// ctx.camera.zoom = f32(math.cos(ctx.curr_time) + 2)*2
 		// ctx.camera.target.x = f32(math.cos(ctx.curr_time))*50

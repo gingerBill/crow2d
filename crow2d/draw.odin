@@ -1,6 +1,5 @@
 package crowd2d
 
-import "core:slice"
 import "core:math"
 import "core:math/linalg"
 
@@ -10,7 +9,6 @@ default_draw_call :: proc(ctx: ^Context) -> Draw_Call {
 		shader     = ctx.default_shader,
 		texture    = ctx.default_texture,
 
-		layer      = 0,
 		depth_test = false,
 
 		offset     = len(ctx.vertices),
@@ -77,31 +75,7 @@ set_depth_test :: proc(ctx: ^Context, depth_test: bool) -> (prev: bool) {
 	return
 }
 
-set_layer :: proc(ctx: ^Context, layer: f32) -> (prev: f32) {
-	prev = 0
-	dc := default_draw_call(ctx)
-	if len(ctx.draw_calls) != 0 {
-		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
-		prev = last.layer
-		if last.layer == layer {
-			return
-		}
-		last.length = len(ctx.vertices)-last.offset
-		dc = last^
-	}
-	dc.layer = layer
-	dc.offset = len(ctx.vertices)
-	append(&ctx.draw_calls, dc)
-	return
-}
-
-
 sort_draw_calls :: proc(draw_calls: ^[dynamic]Draw_Call) {
-	slice.sort_by(draw_calls[:], proc(a, b: Draw_Call) -> bool {
-		return a.layer < b.layer
-	})
-
-
 	// for i := 1; i < len(draw_calls); /**/ {
 	// 	a := &draw_calls[i-1]
 	// 	b := &draw_calls[i]
@@ -138,10 +112,10 @@ check_draw_call :: proc(ctx: ^Context) {
 rotate_vectors :: proc(ctx: ^Context, offset: int, pos, origin: Vec2, rotation: f32) {
 	s, c := math.sincos(rotation)
 	for &v in ctx.vertices[offset:] {
-		p := v.pos - pos - origin
+		p := v.pos.xy - pos - origin
 		p = {c*p.x - s*p.y, s*p.x + c*p.y}
-		p += pos
-		v.pos = p
+		p.xy += pos
+		v.pos.xy = p
 	}
 }
 
@@ -164,13 +138,15 @@ draw_rect :: proc(
 	c := pos + {size.x, size.y}
 	d := pos + {0, size.y}
 
-	append(&ctx.vertices, Vertex{pos = a, col = color, uv = {uv0.x, uv0.y}})
-	append(&ctx.vertices, Vertex{pos = b, col = color, uv = {uv1.x, uv0.y}})
-	append(&ctx.vertices, Vertex{pos = c, col = color, uv = {uv1.x, uv1.y}})
+	z := ctx.curr_z
 
-	append(&ctx.vertices, Vertex{pos = c, col = color, uv = {uv1.x, uv1.y}})
-	append(&ctx.vertices, Vertex{pos = d, col = color, uv = {uv0.x, uv1.y}})
-	append(&ctx.vertices, Vertex{pos = a, col = color, uv = {uv0.x, uv0.y}})
+	append(&ctx.vertices, Vertex{pos = {a.x, a.y, z}, col = color, uv = {uv0.x, uv0.y}})
+	append(&ctx.vertices, Vertex{pos = {b.x, b.y, z}, col = color, uv = {uv1.x, uv0.y}})
+	append(&ctx.vertices, Vertex{pos = {c.x, c.y, z}, col = color, uv = {uv1.x, uv1.y}})
+
+	append(&ctx.vertices, Vertex{pos = {c.x, c.y, z}, col = color, uv = {uv1.x, uv1.y}})
+	append(&ctx.vertices, Vertex{pos = {d.x, d.y, z}, col = color, uv = {uv0.x, uv1.y}})
+	append(&ctx.vertices, Vertex{pos = {a.x, a.y, z}, col = color, uv = {uv0.x, uv0.y}})
 	rotate_vectors(ctx, offset, pos, origin, rotation)
 }
 
@@ -199,10 +175,12 @@ draw_rect_outline :: proc(
 draw_quad :: proc(ctx: ^Context, verts: [4]Vec2, color: Color, tex := TEXTURE_INVALID, uvs := [4]Vec2{}) {
 	set_texture(ctx, tex)
 
-	a := Vertex{pos = verts[0], uv = uvs[0], col = color}
-	b := Vertex{pos = verts[1], uv = uvs[1], col = color}
-	c := Vertex{pos = verts[2], uv = uvs[2], col = color}
-	d := Vertex{pos = verts[3], uv = uvs[3], col = color}
+	z := ctx.curr_z
+
+	a := Vertex{pos = {verts[0].x, verts[0].y, z}, uv = uvs[0], col = color}
+	b := Vertex{pos = {verts[1].x, verts[1].y, z}, uv = uvs[1], col = color}
+	c := Vertex{pos = {verts[2].x, verts[2].y, z}, uv = uvs[2], col = color}
+	d := Vertex{pos = {verts[3].x, verts[3].y, z}, uv = uvs[3], col = color}
 
 	append(&ctx.vertices, a, b, c)
 	append(&ctx.vertices, c, d, a)
@@ -229,13 +207,15 @@ draw_line :: proc(ctx: ^Context, start, end: Vec2, thickness: f32, col: Color) {
 	b := end   - t
 	d := start + t
 
-	append(&ctx.vertices, Vertex{pos = a, col = col, uv = {0, 0}})
-	append(&ctx.vertices, Vertex{pos = b, col = col, uv = {1, 0}})
-	append(&ctx.vertices, Vertex{pos = c, col = col, uv = {1, 1}})
+	z := ctx.curr_z
 
-	append(&ctx.vertices, Vertex{pos = c, col = col, uv = {1, 1}})
-	append(&ctx.vertices, Vertex{pos = d, col = col, uv = {0, 1}})
-	append(&ctx.vertices, Vertex{pos = a, col = col, uv = {0, 0}})
+	append(&ctx.vertices, Vertex{pos = {a.x, a.y, z}, col = col, uv = {0, 0}})
+	append(&ctx.vertices, Vertex{pos = {b.x, b.y, z}, col = col, uv = {1, 0}})
+	append(&ctx.vertices, Vertex{pos = {c.x, c.y, z}, col = col, uv = {1, 1}})
+
+	append(&ctx.vertices, Vertex{pos = {c.x, c.y, z}, col = col, uv = {1, 1}})
+	append(&ctx.vertices, Vertex{pos = {d.x, d.y, z}, col = col, uv = {0, 1}})
+	append(&ctx.vertices, Vertex{pos = {a.x, a.y, z}, col = col, uv = {0, 0}})
 }
 
 draw_circle :: proc(ctx: ^Context, centre: Vec2, radius: f32, col: Color, segments := 32) {
@@ -247,7 +227,7 @@ draw_ellipse :: proc(ctx: ^Context, centre: Vec2, #no_broadcast radii: Vec2, col
 	check_draw_call(ctx)
 
 
-	c := Vertex{pos = centre, col = col}
+	c := Vertex{pos = {centre.x, centre.y, ctx.curr_z}, col = col}
 
 	for i in 0..<segments {
 		t0 := f32(i+0)/f32(segments) * math.TAU
@@ -270,7 +250,7 @@ draw_ellipse :: proc(ctx: ^Context, centre: Vec2, #no_broadcast radii: Vec2, col
 draw_ring :: proc(ctx: ^Context, centre: Vec2, inner_radius, outer_radius: f32, angle_start, angle_end: f32, col: Color, segments := 32) {
 	check_draw_call(ctx)
 
-	p := Vertex{pos = centre, col = col}
+	p := Vertex{pos = {centre.x, centre.y, ctx.curr_z}, col = col}
 
 	for i in 0..<segments {
 		t0 := math.lerp(angle_start, angle_end, f32(i+0)/f32(segments))
@@ -310,7 +290,7 @@ draw_sector_outline :: proc(ctx: ^Context, centre: Vec2, radius: f32, thickness:
 draw_ellipse_ring :: proc(ctx: ^Context, centre: Vec2, #no_broadcast inner_radii, outer_radii: Vec2, angle_start, angle_end: f32, col: Color, segments := 32) {
 	check_draw_call(ctx)
 
-	p := Vertex{pos = centre, col = col}
+	p := Vertex{pos = {centre.x, centre.y, ctx.curr_z}, col = col}
 
 	for i in 0..<segments {
 		t0 := math.lerp(angle_start, angle_end, f32(i+0)/f32(segments))
@@ -347,10 +327,11 @@ draw_ellipse_arc :: proc(ctx: ^Context, centre: Vec2, radii: Vec2, thickness: f3
 draw_triangle :: proc(ctx: ^Context, v0, v1, v2: Vec2, col: Color) {
 	check_draw_call(ctx)
 
+	z := ctx.curr_z
 
-	a := Vertex{pos = v0, col = col}
-	b := Vertex{pos = v1, col = col}
-	c := Vertex{pos = v2, col = col}
+	a := Vertex{pos = {v0.x, v0.y, z}, col = col}
+	b := Vertex{pos = {v1.x, v1.y, z}, col = col}
+	c := Vertex{pos = {v2.x, v2.y, z}, col = col}
 
 	append(&ctx.vertices, a, b, c)
 }
@@ -370,20 +351,25 @@ draw_triangle_strip :: proc(ctx: ^Context, points: []Vec2, col: Color) {
 
 	check_draw_call(ctx)
 
+	z := ctx.curr_z
+
 	for i in 2..<len(points) {
 		a, b, c: Vertex
+		a.pos.z = z
+		b.pos.z = z
+		c.pos.z = z
 		a.col = col
 		b.col = col
 		c.col = col
 
 		if i&1 != 0 {
-			a.pos = points[i]
-			b.pos = points[i-2]
-			c.pos = points[i-1]
+			a.pos.xy = points[i]
+			b.pos.xy = points[i-2]
+			c.pos.xy = points[i-1]
 		} else {
-			a.pos = points[i]
-			b.pos = points[i-1]
-			c.pos = points[i-2]
+			a.pos.xy = points[i]
+			b.pos.xy = points[i-1]
+			c.pos.xy = points[i-2]
 		}
 		append(&ctx.vertices, a, b, c)
 	}

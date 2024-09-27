@@ -385,7 +385,7 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 
 		a_pos := u32(gl.GetAttribLocation(shader, "a_pos"))
 		gl.EnableVertexAttribArray(a_pos)
-		gl.VertexAttribPointer(a_pos, 2, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
+		gl.VertexAttribPointer(a_pos, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
 
 		a_col := u32(gl.GetAttribLocation(shader, "a_col"))
 		gl.EnableVertexAttribArray(a_col)
@@ -465,8 +465,6 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 			enable_shader_state(ctx, dc.shader.handle, ctx.camera, width, height)
 		}
 
-		gl.Uniform1f(gl.GetUniformLocation(dc.shader.handle, "u_layer"), dc.layer)
-
 		gl.DrawArrays(gl.TRIANGLES, i32(dc.offset), i32(dc.length))
 	}
 
@@ -486,12 +484,11 @@ precision highp float;
 uniform mat4  u_camera;
 uniform mat4  u_view;
 uniform mat4  u_projection;
-uniform float u_layer;
 
 uniform vec2  u_screen_size;
 uniform vec2  u_mouse_pos;
 
-attribute vec2 a_pos;
+attribute vec3 a_pos;
 attribute vec4 a_col;
 attribute vec2 a_uv;
 
@@ -501,7 +498,7 @@ varying vec2 v_uv;
 void main() {
 	v_color = a_col;
 	v_uv = a_uv;
-	gl_Position = u_camera * vec4(a_pos, u_layer, 1.0);
+	gl_Position = u_camera * vec4(a_pos, 1.0);
 }
 `
 

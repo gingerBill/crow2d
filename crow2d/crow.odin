@@ -54,7 +54,7 @@ Camera_Default :: Camera{
 
 
 Vertex :: struct {
-	pos: Vec2,
+	pos: Vec3, // 3 components to allow for possible depth testing
 	col: Color,
 	uv:  Vec2,
 }
@@ -63,7 +63,6 @@ Draw_Call :: struct {
 	shader:     Shader,
 	texture:    Texture,
 	depth_test: bool,
-	layer:      f32,
 
 	offset:     int,
 	length:     int,
@@ -96,6 +95,8 @@ Context :: struct {
 	default_shader:  Shader,
 	default_texture: Texture,
 	vertex_buffer:   Buffer,
+
+	curr_z: f32,
 
 	update: Update_Proc,
 	fini: Fini_Proc,
@@ -142,7 +143,8 @@ init :: proc(ctx: ^Context, canvas_id: string, init: Init_Proc, update: Update_P
 	ctx.fini = fini
 	ctx.pixel_scale = u8(clamp(pixel_scale, 1, 255))
 	ctx.camera = Camera_Default
-	ctx.clear_color = {128, 179, 255, 255}
+	ctx.clear_color = SKY_BLUE
+	ctx.curr_z = 0
 
 	reserve(&ctx.vertices,   1<<20)
 	reserve(&ctx.draw_calls, 1<<12)
@@ -197,6 +199,7 @@ step :: proc(curr_time: f64) -> bool {
 		ctx.prev_time = ctx.curr_time
 		ctx.curr_time = curr_time
 		ctx.frame_counter += 1
+		ctx.curr_z = 0
 
 		if ctx.is_done {
 			p := &global_context_list
