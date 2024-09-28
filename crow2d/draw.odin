@@ -75,39 +75,6 @@ set_depth_test :: proc(ctx: ^Context, depth_test: bool) -> (prev: bool) {
 	return
 }
 
-sort_draw_calls :: proc(draw_calls: ^[dynamic]Draw_Call) {
-	// for i := 1; i < len(draw_calls); /**/ {
-	// 	a := &draw_calls[i-1]
-	// 	b := &draw_calls[i]
-	// 	if a.shader == b.shader &&
-	// 	   a.texture == b.texture &&
-	// 	   a.depth_test == b.depth_test &&
-	// 	   a.layer == b.layer {
-	// 		if a.offset+a.length == b.offset {
-	// 			a.length += b.length
-	// 			ordered_remove(draw_calls, i)
-	// 			continue
-	// 		}
-	// 		if b.offset+b.length == a.offset {
-	// 			a.offset = b.offset
-	// 			a.length = a.length+b.length
-	// 			ordered_remove(draw_calls, i)
-	// 			continue
-	// 		}
-	// 	}
-	// 	i += 1
-	// }
-}
-
-
-
-@(private="file")
-check_draw_call :: proc(ctx: ^Context) {
-	set_texture(ctx, ctx.default_texture)
-}
-
-
-
 @(private)
 rotate_vectors :: proc(ctx: ^Context, offset: int, pos, origin: Vec2, rotation: f32) {
 	s, c := math.sincos(rotation)
@@ -195,8 +162,8 @@ draw_convex_polygon :: proc(ctx: ^Context, vertices: []Vertex, tex := TEXTURE_IN
 	}
 }
 
-draw_line :: proc(ctx: ^Context, start, end: Vec2, thickness: f32, col: Color) {
-	check_draw_call(ctx)
+draw_line :: proc(ctx: ^Context, start, end: Vec2, thickness: f32, color: Color) {
+	set_texture(ctx, ctx.default_texture)
 
 	dx := end-start
 	dy := linalg.normalize0(Vec2{-dx.y, +dx.x})
@@ -209,25 +176,25 @@ draw_line :: proc(ctx: ^Context, start, end: Vec2, thickness: f32, col: Color) {
 
 	z := ctx.curr_z
 
-	append(&ctx.vertices, Vertex{pos = {a.x, a.y, z}, col = col, uv = {0, 0}})
-	append(&ctx.vertices, Vertex{pos = {b.x, b.y, z}, col = col, uv = {1, 0}})
-	append(&ctx.vertices, Vertex{pos = {c.x, c.y, z}, col = col, uv = {1, 1}})
+	append(&ctx.vertices, Vertex{pos = {a.x, a.y, z}, col = color, uv = {0, 0}})
+	append(&ctx.vertices, Vertex{pos = {b.x, b.y, z}, col = color, uv = {1, 0}})
+	append(&ctx.vertices, Vertex{pos = {c.x, c.y, z}, col = color, uv = {1, 1}})
 
-	append(&ctx.vertices, Vertex{pos = {c.x, c.y, z}, col = col, uv = {1, 1}})
-	append(&ctx.vertices, Vertex{pos = {d.x, d.y, z}, col = col, uv = {0, 1}})
-	append(&ctx.vertices, Vertex{pos = {a.x, a.y, z}, col = col, uv = {0, 0}})
+	append(&ctx.vertices, Vertex{pos = {c.x, c.y, z}, col = color, uv = {1, 1}})
+	append(&ctx.vertices, Vertex{pos = {d.x, d.y, z}, col = color, uv = {0, 1}})
+	append(&ctx.vertices, Vertex{pos = {a.x, a.y, z}, col = color, uv = {0, 0}})
 }
 
-draw_circle :: proc(ctx: ^Context, centre: Vec2, radius: f32, col: Color, segments := 32) {
-	draw_ellipse(ctx, centre, {radius, radius}, col, segments)
+draw_circle :: proc(ctx: ^Context, center: Vec2, radius: f32, color: Color, segments := 32) {
+	draw_ellipse(ctx, center, {radius, radius}, color, segments)
 }
 
 
-draw_ellipse :: proc(ctx: ^Context, centre: Vec2, #no_broadcast radii: Vec2, col: Color, segments := 32) {
-	check_draw_call(ctx)
+draw_ellipse :: proc(ctx: ^Context, center: Vec2, #no_broadcast radii: Vec2, color: Color, segments := 32) {
+	set_texture(ctx, ctx.default_texture)
 
 
-	c := Vertex{pos = {centre.x, centre.y, ctx.curr_z}, col = col}
+	c := Vertex{pos = {center.x, center.y, ctx.curr_z}, col = color}
 
 	for i in 0..<segments {
 		t0 := f32(i+0)/f32(segments) * math.TAU
@@ -247,10 +214,10 @@ draw_ellipse :: proc(ctx: ^Context, centre: Vec2, #no_broadcast radii: Vec2, col
 }
 
 
-draw_ring :: proc(ctx: ^Context, centre: Vec2, inner_radius, outer_radius: f32, angle_start, angle_end: f32, col: Color, segments := 32) {
-	check_draw_call(ctx)
+draw_ring :: proc(ctx: ^Context, center: Vec2, inner_radius, outer_radius: f32, angle_start, angle_end: f32, color: Color, segments := 32) {
+	set_texture(ctx, ctx.default_texture)
 
-	p := Vertex{pos = {centre.x, centre.y, ctx.curr_z}, col = col}
+	p := Vertex{pos = {center.x, center.y, ctx.curr_z}, col = color}
 
 	for i in 0..<segments {
 		t0 := math.lerp(angle_start, angle_end, f32(i+0)/f32(segments))
@@ -279,18 +246,18 @@ draw_ring :: proc(ctx: ^Context, centre: Vec2, inner_radius, outer_radius: f32, 
 	}
 }
 
-draw_sector :: proc(ctx: ^Context, centre: Vec2, radius: f32, angle_start, angle_end: f32, col: Color, segments := 32) {
-	draw_ring(ctx, centre, 0, radius, angle_start, angle_end, col, segments)
+draw_sector :: proc(ctx: ^Context, center: Vec2, radius: f32, angle_start, angle_end: f32, color: Color, segments := 32) {
+	draw_ring(ctx, center, 0, radius, angle_start, angle_end, color, segments)
 }
 
-draw_sector_outline :: proc(ctx: ^Context, centre: Vec2, radius: f32, thickness: f32, angle_start, angle_end: f32, col: Color, segments := 32) {
-	draw_ring(ctx, centre, radius, radius+thickness, angle_start, angle_end, col, segments)
+draw_sector_outline :: proc(ctx: ^Context, center: Vec2, radius: f32, thickness: f32, angle_start, angle_end: f32, color: Color, segments := 32) {
+	draw_ring(ctx, center, radius, radius+thickness, angle_start, angle_end, color, segments)
 }
 
-draw_ellipse_ring :: proc(ctx: ^Context, centre: Vec2, #no_broadcast inner_radii, outer_radii: Vec2, angle_start, angle_end: f32, col: Color, segments := 32) {
-	check_draw_call(ctx)
+draw_ellipse_ring :: proc(ctx: ^Context, center: Vec2, #no_broadcast inner_radii, outer_radii: Vec2, angle_start, angle_end: f32, color: Color, segments := 32) {
+	set_texture(ctx, ctx.default_texture)
 
-	p := Vertex{pos = {centre.x, centre.y, ctx.curr_z}, col = col}
+	p := Vertex{pos = {center.x, center.y, ctx.curr_z}, col = color}
 
 	for i in 0..<segments {
 		t0 := math.lerp(angle_start, angle_end, f32(i+0)/f32(segments))
@@ -319,37 +286,37 @@ draw_ellipse_ring :: proc(ctx: ^Context, centre: Vec2, #no_broadcast inner_radii
 	}
 }
 
-draw_ellipse_arc :: proc(ctx: ^Context, centre: Vec2, radii: Vec2, thickness: f32, angle_start, angle_end: f32, col: Color, segments := 32) {
-	draw_ellipse_ring(ctx, centre, radii, radii+thickness, angle_start, angle_end, col, segments)
+draw_ellipse_arc :: proc(ctx: ^Context, center: Vec2, radii: Vec2, thickness: f32, angle_start, angle_end: f32, color: Color, segments := 32) {
+	draw_ellipse_ring(ctx, center, radii, radii+thickness, angle_start, angle_end, color, segments)
 }
 
 
-draw_triangle :: proc(ctx: ^Context, v0, v1, v2: Vec2, col: Color) {
-	check_draw_call(ctx)
+draw_triangle :: proc(ctx: ^Context, v0, v1, v2: Vec2, color: Color) {
+	set_texture(ctx, ctx.default_texture)
 
 	z := ctx.curr_z
 
-	a := Vertex{pos = {v0.x, v0.y, z}, col = col}
-	b := Vertex{pos = {v1.x, v1.y, z}, col = col}
-	c := Vertex{pos = {v2.x, v2.y, z}, col = col}
+	a := Vertex{pos = {v0.x, v0.y, z}, col = color}
+	b := Vertex{pos = {v1.x, v1.y, z}, col = color}
+	c := Vertex{pos = {v2.x, v2.y, z}, col = color}
 
 	append(&ctx.vertices, a, b, c)
 }
 
 
-draw_triangle_lines :: proc(ctx: ^Context, v0, v1, v2: Vec2, thickness: f32, col: Color) {
-	draw_line(ctx, v0, v1, thickness, col)
-	draw_line(ctx, v1, v2, thickness, col)
-	draw_line(ctx, v2, v0, thickness, col)
+draw_triangle_lines :: proc(ctx: ^Context, v0, v1, v2: Vec2, thickness: f32, color: Color) {
+	draw_line(ctx, v0, v1, thickness, color)
+	draw_line(ctx, v1, v2, thickness, color)
+	draw_line(ctx, v2, v0, thickness, color)
 }
 
 
-draw_triangle_strip :: proc(ctx: ^Context, points: []Vec2, col: Color) {
+draw_triangle_strip :: proc(ctx: ^Context, points: []Vec2, color: Color) {
 	if len(points) < 3 {
 		return
 	}
 
-	check_draw_call(ctx)
+	set_texture(ctx, ctx.default_texture)
 
 	z := ctx.curr_z
 
@@ -358,9 +325,9 @@ draw_triangle_strip :: proc(ctx: ^Context, points: []Vec2, col: Color) {
 		a.pos.z = z
 		b.pos.z = z
 		c.pos.z = z
-		a.col = col
-		b.col = col
-		c.col = col
+		a.col = color
+		b.col = color
+		c.col = color
 
 		if i&1 != 0 {
 			a.pos.xy = points[i]
@@ -376,20 +343,20 @@ draw_triangle_strip :: proc(ctx: ^Context, points: []Vec2, col: Color) {
 }
 
 
-draw_line_strip :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Color) {
+draw_line_strip :: proc(ctx: ^Context, points: []Vec2, thickness: f32, color: Color) {
 	if len(points) < 2 {
 		return
 	}
 
-	check_draw_call(ctx)
+	set_texture(ctx, ctx.default_texture)
 
 	for i in 0..<len(points)-1 {
-		draw_line(ctx, points[i], points[i+1], thickness, col)
+		draw_line(ctx, points[i], points[i+1], thickness, color)
 	}
 }
 
 
-draw_spline_linear :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Color) {
+draw_spline_linear :: proc(ctx: ^Context, points: []Vec2, thickness: f32, color: Color) {
 	if len(points) < 2 {
 		return
 	}
@@ -424,7 +391,7 @@ draw_spline_linear :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: C
 			{points[i+1].x + radius.x,    points[i+1].y + radius.y},
 		}
 
-		draw_triangle_strip(ctx, strip[:], col)
+		draw_triangle_strip(ctx, strip[:], color)
 
 		prev_radius = radius
 		prev_normal = normal
@@ -434,7 +401,7 @@ draw_spline_linear :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: C
 
 SPLINE_SEGMENT_DIVISIONS :: 24
 
-draw_spline_basis :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Color) {
+draw_spline_basis :: proc(ctx: ^Context, points: []Vec2, thickness: f32, color: Color) {
 	if len(points) < 4 {
 		return
 	}
@@ -468,7 +435,7 @@ draw_spline_basis :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Co
 		curr_point.y = b[3]
 
 		if i == 0 {
-			draw_circle(ctx, curr_point, thickness*0.5, col)
+			draw_circle(ctx, curr_point, thickness*0.5, color)
 		}
 
 		if i > 0 {
@@ -503,13 +470,13 @@ draw_spline_basis :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Co
 			curr_point = next_point
 		}
 
-	        draw_triangle_strip(ctx, vertices[:], col)
+	        draw_triangle_strip(ctx, vertices[:], color)
 	}
 
-	draw_circle(ctx, curr_point, thickness*0.5, col)
+	draw_circle(ctx, curr_point, thickness*0.5, color)
 }
 
-draw_spline_catmull_rom :: proc(ctx: ^Context, points: []Vec2, thickness: f32, col: Color) {
+draw_spline_catmull_rom :: proc(ctx: ^Context, points: []Vec2, thickness: f32, color: Color) {
 	if len(points) < 4 {
 		return
 	}
@@ -522,7 +489,7 @@ draw_spline_catmull_rom :: proc(ctx: ^Context, points: []Vec2, thickness: f32, c
 	next_point: Vec2
 	vertices: [2*SPLINE_SEGMENT_DIVISIONS + 2]Vec2
 
-	draw_circle(ctx, curr_point, thickness*0.5, col)
+	draw_circle(ctx, curr_point, thickness*0.5, color)
 
 	for i in 0..<len(points)-3 {
 		p0 := points[i+0]
@@ -567,8 +534,8 @@ draw_spline_catmull_rom :: proc(ctx: ^Context, points: []Vec2, thickness: f32, c
 			curr_point = next_point
 		}
 
-	        draw_triangle_strip(ctx, vertices[:], col)
+	        draw_triangle_strip(ctx, vertices[:], color)
 	}
 
-	draw_circle(ctx, curr_point, thickness*0.5, col)
+	draw_circle(ctx, curr_point, thickness*0.5, color)
 }

@@ -162,6 +162,10 @@ init :: proc(ctx: ^Context, canvas_id: string, init: Init_Proc, update: Update_P
 	return true
 }
 
+stop :: proc(ctx: ^Context) {
+	ctx.is_done = true
+}
+
 // Only needed for non-JS platforms
 start :: proc() {
 	start_time := time.tick_now()
@@ -173,6 +177,7 @@ start :: proc() {
 	}
 }
 
+@(private)
 fini :: proc(ctx: ^Context) {
 	if ctx == nil {
 		return
@@ -230,8 +235,6 @@ draw_all :: proc(ctx: ^Context) -> bool {
 		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
 		last.length = len(ctx.vertices)-last.offset
 	}
-
-	sort_draw_calls(&ctx.draw_calls)
 
 	ok := platform_draw(ctx)
 	clear(&ctx.vertices)
