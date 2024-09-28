@@ -70,8 +70,8 @@ platform_update :: proc(ctx: ^Context) -> bool {
 			js.set_element_key_f64(ctx.canvas_id, "height", f64(client_height))
 		}
 
-		ctx.canvas_width  = f32(client_width)
-		ctx.canvas_height = f32(client_height)
+		ctx.canvas_size.x = f32(client_width)
+		ctx.canvas_size.y = f32(client_height)
 	}
 
 	for &gamepad in ctx.io.gamepads {
@@ -106,7 +106,7 @@ platform_update :: proc(ctx: ^Context) -> bool {
 
 @(require_results)
 platform_draw :: proc(ctx: ^Context) -> bool {
-	enable_shader_state :: proc(ctx: ^Context, shader: gl.Program, camera: Camera, width, height: i32) {
+	enable_shader_state :: proc(ctx: ^Context, shader: gl.Program, camera: Camera, width, height: i32) -> (mvp: glm.mat4) {
 		gl.UseProgram(shader)
 
 		a_pos := gl.GetAttribLocation(shader, "a_pos")
@@ -131,7 +131,7 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 
 			view := origin * scale * rotation * translation
 
-			mvp := proj * view
+			mvp = proj * view
 
 			gl.UniformMatrix4fv(gl.GetUniformLocation(shader, "u_camera"), mvp)
 			gl.UniformMatrix4fv(gl.GetUniformLocation(shader, "u_view"), view)
@@ -142,6 +142,7 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 
 
 		gl.Uniform1i(gl.GetUniformLocation(gl.Program(shader), "u_texture"), 0)
+		return
 	}
 
 	gl.SetCurrentContextById(ctx.canvas_id) or_return
@@ -167,6 +168,8 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 	prev_draw_call.shader  = SHADER_INVALID
 	prev_draw_call.texture = TEXTURE_INVALID
 
+	mvp: glm.mat4
+
 	for dc in ctx.draw_calls {
 		defer prev_draw_call = dc
 
@@ -184,7 +187,25 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 		}
 
 		if prev_draw_call.shader != dc.shader {
-			enable_shader_state(ctx, gl.Program(dc.shader.handle), ctx.camera, width, height)
+			mvp = enable_shader_state(ctx, gl.Program(dc.shader.handle), ctx.camera, width, height)
+		}
+
+		if prev_draw_call.clip_rect != dc.clip_rect {
+			if r, ok := dc.clip_rect.?; ok {
+				gl.Enable(gl.SCISSOR_TEST)
+				a := (mvp * glm.vec4{r.pos.x, r.pos.y, 0, 1}).xy
+				b := (mvp * glm.vec4{r.pos.x + r.size.x, r.pos.y + r.size.y, 0, 1}).xy
+
+				a.x = clamp(a.x, 0, ctx.canvas_size.x-1)
+				a.y = clamp(a.y, 0, ctx.canvas_size.y-1)
+
+				b.x = clamp(a.x, 0, ctx.canvas_size.x-1)
+				b.y = clamp(a.y, 0, ctx.canvas_size.y-1)
+
+				gl.Scissor(i32(a.x), i32(a.y), i32(b.x-a.x), i32(b.y-a.y))
+			} else {
+				gl.Disable(gl.SCISSOR_TEST)
+			}
 		}
 
 		gl.DrawArrays(gl.TRIANGLES, dc.offset, dc.length)

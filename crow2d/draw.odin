@@ -75,6 +75,24 @@ set_depth_test :: proc(ctx: ^Context, depth_test: bool) -> (prev: bool) {
 	return
 }
 
+set_clip_rect :: proc(ctx: ^Context, clip_rect: Maybe(Clip_Rect)) -> (prev: Maybe(Clip_Rect)) {
+	prev = nil
+	dc := default_draw_call(ctx)
+	if len(ctx.draw_calls) != 0 {
+		last := &ctx.draw_calls[len(ctx.draw_calls)-1]
+		prev = last.clip_rect
+		if last.clip_rect == clip_rect {
+			return
+		}
+		last.length = len(ctx.vertices)-last.offset
+		dc = last^
+	}
+	dc.clip_rect = clip_rect
+	dc.offset = len(ctx.vertices)
+	append(&ctx.draw_calls, dc)
+	return
+}
+
 @(private)
 rotate_vectors :: proc(ctx: ^Context, offset: int, pos, origin: Vec2, rotation: f32) {
 	s, c := math.sincos(rotation)

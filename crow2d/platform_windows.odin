@@ -123,12 +123,11 @@ platform_init :: proc(ctx: ^Context) -> bool {
 	}
 	win32.SetWindowLongPtrW(pd.wnd, win32.GWLP_USERDATA, int(uintptr(ctx)))
 
-	ctx.canvas_width  = 1
-	ctx.canvas_height = 1
+	ctx.canvas_size.x = 1
+	ctx.canvas_size.y = 1
 	if rect: win32.RECT; win32.GetClientRect(pd.wnd, &rect) {
-		ctx.canvas_width  = max(f32(rect.right - rect.left), 1)
-		ctx.canvas_height = max(f32(rect.bottom - rect.top), 1)
-		fmt.println(ctx.canvas_width, ctx.canvas_height)
+		ctx.canvas_size.x = max(f32(rect.right - rect.left), 1)
+		ctx.canvas_size.y = max(f32(rect.bottom - rect.top), 1)
 	}
 
 	OPENGL_MAJOR :: 4
@@ -243,11 +242,11 @@ platform_update :: proc(ctx: ^Context) -> bool {
 		win32.ShowWindow(pd.wnd, 1)
 	}
 
-	ctx.canvas_width  = 1
-	ctx.canvas_height = 1
+	ctx.canvas_size.x = 1
+	ctx.canvas_size.y = 1
 	if rect: win32.RECT; win32.GetClientRect(pd.wnd, &rect) {
-		ctx.canvas_width  = max(f32(rect.right - rect.left), 1)
-		ctx.canvas_height = max(f32(rect.bottom - rect.top), 1)
+		ctx.canvas_size.x = max(f32(rect.right - rect.left), 1)
+		ctx.canvas_size.y = max(f32(rect.bottom - rect.top), 1)
 	}
 
 	for {
@@ -350,7 +349,7 @@ platform_update :: proc(ctx: ^Context) -> bool {
 			break mouse_stuff
 		}
 
-		if ctx.io.mouse_pos.x >= i32(ctx.canvas_width) || ctx.io.mouse_pos.y >= i32(ctx.canvas_height) {
+		if ctx.io.mouse_pos.x >= i32(ctx.canvas_size.x) || ctx.io.mouse_pos.y >= i32(ctx.canvas_size.y) {
 			break mouse_stuff
 		}
 
@@ -380,7 +379,7 @@ platform_update :: proc(ctx: ^Context) -> bool {
 
 @(require_results)
 platform_draw :: proc(ctx: ^Context) -> bool {
-	enable_shader_state :: proc(ctx: ^Context, shader: u32, camera: Camera, width, height: i32) {
+	enable_shader_state :: proc(ctx: ^Context, shader: u32, camera: Camera, width, height: i32) -> (mvp: glm.mat4) {
 		gl.UseProgram(shader)
 
 		a_pos := u32(gl.GetAttribLocation(shader, "a_pos"))
@@ -405,7 +404,7 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 
 			view := origin * scale * rotation * translation
 
-			mvp := proj * view
+			mvp = proj * view
 
 			gl.UniformMatrix4fv(gl.GetUniformLocation(shader, "u_camera"),     1, false, &mvp[0, 0])
 			gl.UniformMatrix4fv(gl.GetUniformLocation(shader, "u_view"),       1, false, &view[0, 0])
@@ -416,6 +415,8 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 
 
 		gl.Uniform1i(gl.GetUniformLocation(shader, "u_texture"), 0)
+
+		return
 	}
 
 	pd := &ctx.platform_data
@@ -428,7 +429,7 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 	gl.BufferData(gl.ARRAY_BUFFER, len(ctx.vertices)*size_of(ctx.vertices[0]), raw_data(ctx.vertices), gl.DYNAMIC_DRAW)
 
 
-	width, height := i32(ctx.canvas_width), i32(ctx.canvas_height)
+	width, height := i32(ctx.canvas_size.x), i32(ctx.canvas_size.y)
 
 	gl.Viewport(0, 0, width, height)
 	gl.ClearColor(f32(ctx.clear_color.r)/255, f32(ctx.clear_color.g)/255, f32(ctx.clear_color.b)/255, f32(ctx.clear_color.a)/255)
@@ -444,6 +445,7 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 	prev_draw_call := Draw_Call{}
 	prev_draw_call.shader  = SHADER_INVALID
 	prev_draw_call.texture = TEXTURE_INVALID
+	mvp: glm.mat4
 
 	for dc in ctx.draw_calls {
 		defer prev_draw_call = dc
@@ -462,7 +464,25 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 		}
 
 		if prev_draw_call.shader != dc.shader {
-			enable_shader_state(ctx, dc.shader.handle, ctx.camera, width, height)
+			mvp = enable_shader_state(ctx, dc.shader.handle, ctx.camera, width, height)
+		}
+
+		if prev_draw_call.clip_rect != dc.clip_rect {
+			if r, ok := dc.clip_rect.?; ok {
+				gl.Enable(gl.SCISSOR_TEST)
+				a := (mvp * glm.vec4{r.pos.x, r.pos.y, 0, 1}).xy
+				b := (mvp * glm.vec4{r.pos.x + r.size.x, r.pos.y + r.size.y, 0, 1}).xy
+
+				a.x = clamp(a.x, 0, ctx.canvas_size.x-1)
+				a.y = clamp(a.y, 0, ctx.canvas_size.y-1)
+
+				b.x = clamp(a.x, 0, ctx.canvas_size.x-1)
+				b.y = clamp(a.y, 0, ctx.canvas_size.y-1)
+
+				gl.Scissor(i32(a.x), i32(a.y), i32(b.x-a.x), i32(b.y-a.y))
+			} else {
+				gl.Disable(gl.SCISSOR_TEST)
+			}
 		}
 
 		gl.DrawArrays(gl.TRIANGLES, i32(dc.offset), i32(dc.length))

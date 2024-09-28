@@ -59,10 +59,16 @@ Vertex :: struct {
 	uv:  Vec2,
 }
 
+Clip_Rect :: struct {
+	pos:  Vec2,
+	size: Vec2,
+}
+
 Draw_Call :: struct {
 	shader:     Shader,
 	texture:    Texture,
 	depth_test: bool,
+	clip_rect:  Maybe(Clip_Rect),
 
 	offset:     int,
 	length:     int,
@@ -77,8 +83,7 @@ Draw_State :: struct {
 
 Context :: struct {
 	canvas_id:     string,
-	canvas_width:  f32,
-	canvas_height: f32,
+	canvas_size:   Vec2,
 	pixel_scale:   u8,
 	clear_color:   Color,
 
@@ -129,8 +134,8 @@ Texture :: struct {
 
 HANDLE_INVALID :: ~u32(0)
 
-SHADER_INVALID  :: Shader{  handle = HANDLE_INVALID }
-BUFFER_INVALID  :: Buffer{  handle = HANDLE_INVALID }
+SHADER_INVALID  :: Shader { handle = HANDLE_INVALID }
+BUFFER_INVALID  :: Buffer { handle = HANDLE_INVALID }
 TEXTURE_INVALID :: Texture{ handle = HANDLE_INVALID }
 
 
