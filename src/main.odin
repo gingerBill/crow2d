@@ -28,8 +28,8 @@ main :: proc() {
 	init = proc(ctx: ^crow.Context) -> bool {
 		puppy = crow.texture_load_from_memory(ctx, puppy_data) or_return
 
-		width := ctx.canvas_width
-		height := ctx.canvas_height
+		width  := ctx.canvas_size.x
+		height := ctx.canvas_size.y
 
 		player_pos = {width*0.5, height*0.5 - player_size.y}
 		ground = player_pos.y
@@ -41,8 +41,8 @@ main :: proc() {
 		return true
 	},
 	update = proc(ctx: ^crow.Context, dt: f32) {
-		width := ctx.canvas_width
-		height := ctx.canvas_height
+		width := ctx.canvas_size.x
+		height := ctx.canvas_size.y
 		_ = width
 		_ = height
 
@@ -126,14 +126,14 @@ main :: proc() {
 		crow.draw_rect(ctx, {400, 400}, {32, 64}, origin={16, 32}, rotation=f32(ctx.curr_time), color={255, 0, 255, 255})
 		crow.draw_rect_outline(ctx, {400, 400}, {32, 64}, thickness=10, origin={16, 32}, rotation=f32(ctx.curr_time), color={0, 0, 255, 127})
 
-		crow.draw_spline_catmull_rom(ctx, {
+		crow.draw_spline_catmull_rom(ctx,
+			{
 				{10, 10},
 				{10, 10},
 				{100, 200},
 				{50, 300},
 				{500, 150},
 				{100, 300},
-
 			},
 			20,
 			{255, 0, 0, 255},

@@ -123,6 +123,8 @@ platform_init :: proc(ctx: ^Context) -> bool {
 	}
 	win32.SetWindowLongPtrW(pd.wnd, win32.GWLP_USERDATA, int(uintptr(ctx)))
 
+	_ = platform_sound_init(ctx)
+
 	ctx.canvas_size.x = 1
 	ctx.canvas_size.y = 1
 	if rect: win32.RECT; win32.GetClientRect(pd.wnd, &rect) {
@@ -216,6 +218,9 @@ platform_fini :: proc(ctx: ^Context) {
 
 	gl.DeleteVertexArrays(1, &pd.vao)
 	win32.wglDeleteContext(pd.opengl_ctx)
+
+	_ = platform_sound_fini(ctx)
+
 	// win32.ReleaseDC(pd.wnd, pd.dc)
 	win32.DestroyWindow(pd.wnd)
 }
@@ -373,6 +378,7 @@ platform_update :: proc(ctx: ^Context) -> bool {
 		}
 	}
 
+	_ = platform_sound_step(ctx)
 
 	return true
 }
@@ -610,4 +616,19 @@ platform_win_proc :: proc "system" (hwnd: win32.HWND, Msg: win32.UINT, wParam: w
 	}
 	return 0
 
+}
+
+@(private="file")
+platform_sound_init :: proc(ctx: ^Context) -> bool {
+	return false
+}
+
+@(private="file")
+platform_sound_step :: proc(ctx: ^Context) -> bool {
+	return false
+}
+
+@(private="file")
+platform_sound_fini :: proc(ctx: ^Context) -> bool {
+	return false
 }

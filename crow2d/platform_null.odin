@@ -32,4 +32,3 @@ platform_texture_load_from_img :: proc(ctx: ^Context, img: Image, opts: Texture_
 
 platform_texture_unload :: proc(ctx: ^Context, tex: Texture) {
 
-}

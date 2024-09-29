@@ -31,6 +31,8 @@ platform_init :: proc(ctx: ^Context) -> bool {
 		}
 	}
 
+	_ = platform_sound_init(ctx)
+
 	platform_update(ctx) or_return
 	return true
 }
@@ -48,6 +50,8 @@ platform_fini :: proc(ctx: ^Context) {
 
 	gl.DeleteBuffer(gl.Buffer(ctx.vertex_buffer.handle))
 	gl.DeleteProgram(gl.Program(ctx.default_shader.handle))
+
+	_ = platform_sound_fini(ctx)
 }
 
 @(require_results)
@@ -98,6 +102,8 @@ platform_update :: proc(ctx: ^Context) -> bool {
 
 		}
 	}
+
+	_ = platform_sound_step(ctx)
 
 	gl.SetCurrentContextById(ctx.canvas_id) or_return
 
@@ -509,3 +515,19 @@ code_to_key :: proc(code: string) -> (key: Key, printable: bool) {
 	return .Invalid, false
 }
 
+
+
+@(private="file")
+platform_sound_init :: proc(ctx: ^Context) -> bool {
+	return false
+}
+
+@(private="file")
+platform_sound_step :: proc(ctx: ^Context) -> bool {
+	return false
+}
+
+@(private="file")
+platform_sound_fini :: proc(ctx: ^Context) -> bool {
+	return false
+}

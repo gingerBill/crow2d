@@ -113,6 +113,10 @@ Context :: struct {
 	_next: ^Context,
 
 	platform_data: Platform_Data,
+
+	sound_sample_rate:     f32,
+	audio_source_pool:     ^Audio_Source,
+	audio_source_playback: ^Audio_Source,
 }
 
 Update_Proc :: proc(ctx: ^Context, dt: f32)
@@ -150,6 +154,7 @@ init :: proc(ctx: ^Context, canvas_id: string, init: Init_Proc, update: Update_P
 	ctx.camera = Camera_Default
 	ctx.clear_color = SKY_BLUE
 	ctx.curr_z = 0
+	ctx.sound_sample_rate = 48000
 
 	reserve(&ctx.vertices,   1<<20)
 	reserve(&ctx.draw_calls, 1<<12)
@@ -173,10 +178,10 @@ stop :: proc(ctx: ^Context) {
 
 // Only needed for non-JS platforms
 start :: proc() {
-	start_time := time.tick_now()
+	tick := time.tick_now()
 	for ODIN_OS != .JS && global_context_list != nil {
-		curr_time := time.duration_seconds(time.tick_since(start_time))
-		if !step(curr_time) {
+		dt := time.duration_seconds(time.tick_lap_time(&tick))
+		if !step(dt) {
 			break
 		}
 	}
@@ -199,12 +204,13 @@ fini :: proc(ctx: ^Context) {
 
 
 @(export)
-step :: proc(curr_time: f64) -> bool {
+step :: proc(delta_time: f64) -> bool {
 	free_all(context.temp_allocator)
 
 	for ctx := global_context_list; ctx != nil; /**/ {
 		defer ctx = ctx._next
 
+		curr_time := ctx.curr_time + delta_time
 		dt := curr_time - ctx.curr_time
 		ctx.prev_time = ctx.curr_time
 		ctx.curr_time = curr_time
