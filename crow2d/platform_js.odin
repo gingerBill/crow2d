@@ -176,7 +176,7 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 
 	mvp: glm.mat4
 
-	for dc in ctx.draw_calls {
+	draw_call_loop: for dc in ctx.draw_calls {
 		defer prev_draw_call = dc
 
 		if prev_draw_call.depth_test != dc.depth_test {
@@ -199,16 +199,24 @@ platform_draw :: proc(ctx: ^Context) -> bool {
 		if prev_draw_call.clip_rect != dc.clip_rect {
 			if r, ok := dc.clip_rect.?; ok {
 				gl.Enable(gl.SCISSOR_TEST)
-				a := (mvp * glm.vec4{r.pos.x, r.pos.y, 0, 1}).xy
-				b := (mvp * glm.vec4{r.pos.x + r.size.x, r.pos.y + r.size.y, 0, 1}).xy
+				a := r.pos
+				b := r.pos + r.size
 
 				a.x = clamp(a.x, 0, ctx.canvas_size.x-1)
 				a.y = clamp(a.y, 0, ctx.canvas_size.y-1)
 
-				b.x = clamp(a.x, 0, ctx.canvas_size.x-1)
-				b.y = clamp(a.y, 0, ctx.canvas_size.y-1)
+				b.x = clamp(b.x, 0, ctx.canvas_size.x-1)
+				b.y = clamp(b.y, 0, ctx.canvas_size.y-1)
 
-				gl.Scissor(i32(a.x), i32(a.y), i32(b.x-a.x), i32(b.y-a.y))
+				w := i32(b.x-a.x)
+				h := i32(b.y-a.y)
+
+				if w <= 0 || h <= 0 {
+					continue draw_call_loop
+				}
+
+				// use same coordinate space as the framework
+				gl.Scissor(i32(a.x), i32(ctx.canvas_size.y - 1 - a.y), w, h)
 			} else {
 				gl.Disable(gl.SCISSOR_TEST)
 			}
